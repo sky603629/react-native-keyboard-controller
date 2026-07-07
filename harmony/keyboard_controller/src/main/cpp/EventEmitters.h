@@ -67,32 +67,28 @@ public:
     struct InputLayoutEvent {
         int parentScrollViewTarget;
         int target;
-        struct layout {
+        struct Layout {
             double absoluteX;
             double absoluteY;
             double x;
             double y;
             double width;
             double height;
-        };
+        } layout;
     };
     struct TextChangeEvent {
         std::string text;
     };
     struct InputSectionEvent {
         int target;
-        struct selection {
-            struct start {
+        struct Selection {
+            struct Point {
                 double x;
                 double y;
                 int position;
-            };
-            struct end {
-                double x;
-                double y;
-                int position;
-            };
-        };
+            } start;
+            Point end;
+        } selection;
     };
 
     void onKeyboardMoveStart(MoveEvent value) const;

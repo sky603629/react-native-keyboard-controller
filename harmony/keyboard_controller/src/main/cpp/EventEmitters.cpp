@@ -75,6 +75,16 @@ void KeyboardControllerViewEventEmitter::onKeyboardMoveInteractive(MoveEvent eve
 void KeyboardControllerViewEventEmitter::onFocusedInputLayoutChanged(InputLayoutEvent event) const {
     dispatchEvent("FocusedInputLayoutChanged", [event = std::move(event)](jsi::Runtime &runtime) {
         auto payload = jsi::Object(runtime);
+        auto layout = jsi::Object(runtime);
+        payload.setProperty(runtime, "target", event.target);
+        payload.setProperty(runtime, "parentScrollViewTarget", event.parentScrollViewTarget);
+        layout.setProperty(runtime, "x", event.layout.x);
+        layout.setProperty(runtime, "y", event.layout.y);
+        layout.setProperty(runtime, "width", event.layout.width);
+        layout.setProperty(runtime, "height", event.layout.height);
+        layout.setProperty(runtime, "absoluteX", event.layout.absoluteX);
+        layout.setProperty(runtime, "absoluteY", event.layout.absoluteY);
+        payload.setProperty(runtime, "layout", layout);
         return payload;
     });
 }
@@ -88,6 +98,19 @@ void KeyboardControllerViewEventEmitter::onFocusedInputTextChanged(TextChangeEve
 void KeyboardControllerViewEventEmitter::onFocusedInputSelectionChanged(InputSectionEvent event) const {
     dispatchEvent("FocusedInputSelectionChanged", [event = std::move(event)](jsi::Runtime &runtime) {
         auto payload = jsi::Object(runtime);
+        auto selection = jsi::Object(runtime);
+        auto start = jsi::Object(runtime);
+        auto end = jsi::Object(runtime);
+        payload.setProperty(runtime, "target", event.target);
+        start.setProperty(runtime, "x", event.selection.start.x);
+        start.setProperty(runtime, "y", event.selection.start.y);
+        start.setProperty(runtime, "position", event.selection.start.position);
+        end.setProperty(runtime, "x", event.selection.end.x);
+        end.setProperty(runtime, "y", event.selection.end.y);
+        end.setProperty(runtime, "position", event.selection.end.position);
+        selection.setProperty(runtime, "start", start);
+        selection.setProperty(runtime, "end", end);
+        payload.setProperty(runtime, "selection", selection);
         return payload;
     });
 }
