@@ -66,6 +66,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
   private keyboardWillHideCallback: ((keyboardInfo: window.KeyboardInfo) => void) | undefined = undefined;
   private readonly keyboardAnimationDuration: number = 250;
   private currentKeyboardAnimationDuration: number = this.keyboardAnimationDuration;
+  private focusedInputTarget: number = -1;
   private cleanUpCallbacks: (() => void)[] = [];
   constructor(ctx) {
     super(ctx);
@@ -74,12 +75,14 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
 
     // 订阅 C++ 层发来的 focusDidSet 消息
     this.cleanUpCallbacks.push(
-      this.ctx.rnInstance.cppEventEmitter.subscribe("focusDidSet", (payload: { current: number, count: number }) => {
-        Logger.info('###turboModule received focusDidSet from cpp', String(payload.current) + ',' + String(payload.count));
+      this.ctx.rnInstance.cppEventEmitter.subscribe("focusDidSet", (payload: { current: number, count: number, target?: number }) => {
+        this.focusedInputTarget = payload.target ?? -1;
+        Logger.info('###turboModule received focusDidSet from cpp', String(payload.current) + ',' + String(payload.count) + ',' + String(this.focusedInputTarget));
         if (this.eventListeners.includes(KeyboardControllerEventName.FOCUS_DID_SET)) {
           this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.FOCUS_DID_SET, {
             current: payload.current,
-            count: payload.count
+            count: payload.count,
+            target: this.focusedInputTarget
           });
         }
       })
@@ -179,9 +182,9 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     this.ctx.rnInstance.emitDeviceEvent(eventName, {
       duration: duration,
       timestamp: new Date().getTime() / 1000,
-      target: 0,
+      target: this.focusedInputTarget,
       height: height,
-      tag: 0,
+      tag: this.focusedInputTarget,
       type: "default",
       appearance: this.getKeyboardAppearance()
     });
@@ -335,6 +338,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       this.unregisterKeyboardHeightChangeEvent();
       this.keyboardStatus = KeyboardStatusType.HIDE;
       this.keyboardHeight = 0;
+      this.focusedInputTarget = -1;
     }else{
       const nativeWillRegistered = this.registerNativeKeyboardWillEvents();
       Logger.info('###turboModule keyboard will event source', nativeWillRegistered ? 'native' : 'keyboardHeightChange');

@@ -203,6 +203,7 @@ void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t loca
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
     int currentIndex = -1;
+    int target = -1;
     this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
     int count = static_cast<int>(this->textInputVector.size());
     for (size_t i = 0; i < this->textInputVector.size(); ++i) {
@@ -210,6 +211,7 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
         ArkUINode& node = input->getLocalRootArkUINode();
         if (node.isFocused()) {
            currentIndex = static_cast<int>(i);
+           target = input->getTag();
            break;
         }
     }
@@ -220,7 +222,8 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
        if (rnInstancePtr != nullptr) {
            folly::dynamic payload = folly::dynamic::object
                ("current", currentIndex)
-               ("count", count);
+               ("count", count)
+               ("target", target);
            rnInstancePtr->postMessageToArkTS("focusDidSet", payload);
        }
    }
