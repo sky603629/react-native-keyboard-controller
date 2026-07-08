@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useMemo } from "react";
-import { findNodeHandle } from "react-native";
+import { findNodeHandle, Platform } from "react-native";
 import Reanimated, {
   interpolate,
   scrollTo,
@@ -29,6 +29,8 @@ import type {
   FocusedInputSelectionChangedEvent,
   NativeEvent,
 } from "..//../types";
+
+const IS_HARMONY = (Platform.OS as string) === "harmony";
 
 export type KeyboardAwareScrollViewProps = {
   /** The distance between keyboard and focused `TextInput` when keyboard is shown. Default is `0`. */
@@ -147,17 +149,31 @@ const KeyboardAwareScrollView = forwardRef<
           return 0;
         }
 
-        const visibleRect = height - keyboardHeight.value;
+        const effectiveKeyboardHeight = keyboardHeight.value || e;
+        const visibleRect = height - effectiveKeyboardHeight;
         const absoluteY = layout.value?.layout.absoluteY || 0;
         const inputHeight = layout.value?.layout.height || 0;
         const point = absoluteY + inputHeight;
+        const currentBottomGap = visibleRect - point;
 
-        if (visibleRect - point <= bottomOffset) {
-          const relativeScrollTo =
-            keyboardHeight.value - (height - point) + bottomOffset;
+        if (currentBottomGap <= bottomOffset) {
+          const harmonyCoveredByKeyboard =
+            IS_HARMONY && bottomOffset > 0 && currentBottomGap < 0;
+          const relativeScrollTo = IS_HARMONY
+            ? Math.max(
+                (harmonyCoveredByKeyboard ? -currentBottomGap : 0) +
+                  bottomOffset,
+                0,
+              )
+            : effectiveKeyboardHeight - (height - point) + bottomOffset;
+
+          if (relativeScrollTo <= 0) {
+            return 0;
+          }
+
           const interpolatedScrollTo = interpolate(
             e,
-            [initialKeyboardSize.value, keyboardHeight.value],
+            [initialKeyboardSize.value, effectiveKeyboardHeight],
             [
               0,
               scrollDistanceWithRespectToSnapPoints(
@@ -194,10 +210,11 @@ const KeyboardAwareScrollView = forwardRef<
       (e: NativeEvent) => {
         "worklet";
 
+        const effectiveKeyboardHeight = keyboardHeight.value || e.height;
         const keyboardFrame = interpolate(
           e.height,
-          [0, keyboardHeight.value],
-          [0, keyboardHeight.value + extraKeyboardSpace],
+          [0, effectiveKeyboardHeight],
+          [0, effectiveKeyboardHeight + extraKeyboardSpace],
         );
 
         currentKeyboardFrameHeight.value = keyboardFrame;
@@ -275,8 +292,11 @@ const KeyboardAwareScrollView = forwardRef<
             keyboardHeight.value !== e.height && e.height > 0;
           keyboardWillAppear.value = e.height > 0 && keyboardHeight.value === 0;
           const keyboardWillHide = e.height === 0;
+          const focusedTarget = IS_HARMONY
+            ? input.value?.target ?? e.target
+            : e.target;
           const focusWasChanged =
-            (tag.value !== e.target && e.target !== -1) ||
+            (tag.value !== focusedTarget && focusedTarget !== -1) ||
             keyboardWillChangeSize;
 
           if (keyboardWillChangeSize) {
@@ -302,7 +322,7 @@ const KeyboardAwareScrollView = forwardRef<
 
           // focus was changed
           if (focusWasChanged) {
-            tag.value = e.target;
+            tag.value = focusedTarget;
 
             // save position of focused text input when keyboard starts to move
             layout.value = input.value;
@@ -343,6 +363,18 @@ const KeyboardAwareScrollView = forwardRef<
       () => input.value,
       (current, previous) => {
         if (
+          IS_HARMONY &&
+          keyboardHeight.value > 0 &&
+          current?.target !== previous?.target &&
+          current?.layout
+        ) {
+          layout.value = current;
+          scrollPosition.value = position.value;
+          const scrollDelta = maybeScroll(keyboardHeight.value, true);
+          scrollPosition.value += scrollDelta;
+        }
+
+        if (
           current?.target === previous?.target &&
           current?.layout.height !== previous?.layout.height
         ) {
@@ -353,7 +385,7 @@ const KeyboardAwareScrollView = forwardRef<
           layout.value = prevLayout;
         }
       },
-      [],
+      [bottomOffset, maybeScroll],
     );
 
     const view = useAnimatedStyle(
@@ -366,10 +398,13 @@ const KeyboardAwareScrollView = forwardRef<
             // from 0 to `keyboardHeight`, and here our padding is `keyboardHeight + 1`. It allows us not to re-run layout
             // re-calculation on every animation frame and it helps to achieve smooth animation.
             // see: https://github.com/kirillzyusko/react-native-keyboard-controller/pull/342
-            paddingBottom: currentKeyboardFrameHeight.value + 1,
+            paddingBottom:
+              currentKeyboardFrameHeight.value +
+              (IS_HARMONY ? bottomOffset : 0) +
+              1,
           }
           : {},
-      [enabled],
+      [bottomOffset, enabled],
     );
 
     return (
