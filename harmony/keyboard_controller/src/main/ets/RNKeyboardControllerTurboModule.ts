@@ -184,7 +184,6 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       timestamp: new Date().getTime() / 1000,
       target: this.focusedInputTarget,
       height: height,
-      tag: this.focusedInputTarget,
       type: "default",
       appearance: this.getKeyboardAppearance()
     });

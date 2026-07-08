@@ -157,7 +157,6 @@ export type KeyboardEventData = {
   duration: number;
   timestamp: number;
   target: number;
-  tag: number;
   type: NonNullable<TextInputProps["keyboardType"]>;
   appearance: NonNullable<TextInputProps["keyboardAppearance"]>;
 };
