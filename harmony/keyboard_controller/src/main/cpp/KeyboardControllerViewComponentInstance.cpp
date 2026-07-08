@@ -27,6 +27,7 @@
 
 #include "KeyboardControllerViewComponentInstance.h"
 #include "RNOH/arkui/NativeNodeApi.h"
+#include "RNOHCorePackage/ComponentInstances/ScrollViewComponentInstance.h"
 #include <arkui/native_node.h>
 #include <folly/dynamic.h>
 #include <dlfcn.h>
@@ -304,7 +305,10 @@ int KeyboardControllerViewComponentInstance::findParentScrollViewTarget(
 
     while (current) {
         const std::string name = current->getComponentName();
-        if (name.find("ScrollView") != std::string::npos) {
+        if (std::dynamic_pointer_cast<ScrollViewComponentInstance>(current) != nullptr) {
+            return current->getTag();
+        }
+        if (name == "ScrollView" || name == "RCTScrollView") {
             return current->getTag();
         }
         current = current->getParent().lock();
