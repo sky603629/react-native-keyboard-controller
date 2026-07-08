@@ -55,11 +55,18 @@ interface RNKeyboardControllerSpec {
 
 export class RNKeyboardControllerTurboModule extends TurboModule implements RNKeyboardControllerSpec {
   private context: common.UIAbilityContext;
-  private keyboardHeight: number;
-  private keyboardStatus: KeyboardStatusType;
+  private keyboardHeight: number = 0;
+  private keyboardStatus: KeyboardStatusType = KeyboardStatusType.HIDE;
   private eventListeners: KeyboardControllerEventName[];
   private currentWindow:window.Window;
-  private enabled:boolean;
+  private enabled:boolean = false;
+  private nativeKeyboardWillEventEnabled:boolean = false;
+  private keyboardHeightChangeCallback: ((data: number) => void) | undefined = undefined;
+  private keyboardWillShowCallback: ((keyboardInfo: window.KeyboardInfo) => void) | undefined = undefined;
+  private keyboardWillHideCallback: ((keyboardInfo: window.KeyboardInfo) => void) | undefined = undefined;
+  private readonly keyboardAnimationDuration: number = 250;
+  private currentKeyboardAnimationDuration: number = this.keyboardAnimationDuration;
+  private focusedInputTarget: number = -1;
   private cleanUpCallbacks: (() => void)[] = [];
   constructor(ctx) {
     super(ctx);
@@ -68,12 +75,14 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
 
     // 订阅 C++ 层发来的 focusDidSet 消息
     this.cleanUpCallbacks.push(
-      this.ctx.rnInstance.cppEventEmitter.subscribe("focusDidSet", (payload: { current: number, count: number }) => {
-        Logger.info('###turboModule received focusDidSet from cpp', String(payload.current) + ',' + String(payload.count));
+      this.ctx.rnInstance.cppEventEmitter.subscribe("focusDidSet", (payload: { current: number, count: number, target?: number }) => {
+        this.focusedInputTarget = payload.target ?? -1;
+        Logger.info('###turboModule received focusDidSet from cpp', String(payload.current) + ',' + String(payload.count) + ',' + String(this.focusedInputTarget));
         if (this.eventListeners.includes(KeyboardControllerEventName.FOCUS_DID_SET)) {
           this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.FOCUS_DID_SET, {
             current: payload.current,
-            count: payload.count
+            count: payload.count,
+            target: this.focusedInputTarget
           });
         }
       })
@@ -165,38 +174,154 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     }
   }
 
-  private keyboardControllerEventHandle(keyboardStatus: number, height: number) {
-    Logger.info('###turboModule keyboardControllerEventHandle', String(keyboardStatus) + ',' + String(height));
+  private emitKeyboardEvent(eventName: KeyboardControllerEventName, height: number, duration: number = this.currentKeyboardAnimationDuration): void {
+    if (!this.eventListeners.includes(eventName)) {
+      return;
+    }
+
+    this.ctx.rnInstance.emitDeviceEvent(eventName, {
+      duration: duration,
+      timestamp: new Date().getTime() / 1000,
+      target: this.focusedInputTarget,
+      height: height,
+      tag: this.focusedInputTarget,
+      type: "default",
+      appearance: this.getKeyboardAppearance()
+    });
+  }
+
+  private keyboardControllerEventHandle(previousHeight: number, height: number, emitSyntheticWill: boolean = true) {
+    Logger.info('###turboModule keyboardControllerEventHandle', String(previousHeight) + ',' + String(height));
     if(!this.enabled){
       return
     }
 
-    if (this.keyboardStatus == KeyboardStatusType.HIDE) {
-      // 键盘隐藏
-      Logger.info('###turboModule keyboardControllerEventHandle');
-      this.eventListeners.includes(KeyboardControllerEventName.KEYBOARD_DID_HIDE) &&
-      this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.KEYBOARD_DID_HIDE, {
-        duration: 0,
-        timestamp: new Date().getTime(),
-        target: 0,
-        height: height,
-        tag:0,
-        appearance:this.getKeyboardAppearance()
-      });
+    const wasVisible = previousHeight > 0;
+    const isVisible = height > 0;
+
+    if (emitSyntheticWill && !wasVisible && isVisible) {
+      Logger.info('###turboModule keyboardWillShow');
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, height);
+    } else if (emitSyntheticWill && wasVisible && !isVisible) {
+      Logger.info('###turboModule keyboardWillHide');
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0);
     }
-    if (this.keyboardStatus == KeyboardStatusType.SHOW) {
-      // 键盘显示
-      Logger.info('###turboModule keyboardControllerEventHandle');
-      this.eventListeners.includes(KeyboardControllerEventName.KEYBOARD_DID_SHOW) &&
-      this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.KEYBOARD_DID_SHOW, {
-        duration: 0,
-        timestamp: new Date().getTime(),
-        target: 0,
-        height:height,
-        tag:0,
-        appearance:this.getKeyboardAppearance()
-      });
+
+    if (isVisible) {
+      Logger.info('###turboModule keyboardDidShow');
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_DID_SHOW, height);
+    } else if (wasVisible) {
+      Logger.info('###turboModule keyboardDidHide');
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_DID_HIDE, 0);
     }
+  }
+
+  private getKeyboardHeightFromAvoidArea(fallbackHeight: number = 0): number {
+    try {
+      const keyboardAvoidArea = this.currentWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
+      const height = Math.ceil(px2vp(keyboardAvoidArea.height));
+
+      return height > 0 ? height : fallbackHeight;
+    } catch (exception) {
+      Logger.error('### Failed to get keyboard avoid area. Cause: ' + JSON.stringify(exception));
+    }
+
+    return fallbackHeight;
+  }
+
+  private getKeyboardHeightFromKeyboardInfo(keyboardInfo: window.KeyboardInfo, fallbackHeight: number = 0): number {
+    const keyboardInfoPayload = keyboardInfo as unknown as Record<string, object>;
+    const endRect = keyboardInfoPayload.endRect as Record<string, number> | undefined;
+    const height = Math.ceil(px2vp(endRect?.height ?? 0));
+
+    return height > 0 ? height : fallbackHeight;
+  }
+
+  private getKeyboardDurationFromKeyboardInfo(keyboardInfo: window.KeyboardInfo): number {
+    const keyboardInfoPayload = keyboardInfo as unknown as Record<string, object>;
+    const config = keyboardInfoPayload.config as Record<string, number> | undefined;
+    const duration = config?.duration;
+
+    return duration && duration > 0 ? duration : this.keyboardAnimationDuration;
+  }
+
+  private registerNativeKeyboardWillEvents(): boolean {
+    if (!this.currentWindow) {
+      return false;
+    }
+
+    this.unregisterNativeKeyboardWillEvents();
+
+    this.keyboardWillShowCallback = (keyboardInfo: window.KeyboardInfo) => {
+      if (!this.enabled) {
+        return;
+      }
+      const height = this.getKeyboardHeightFromKeyboardInfo(
+        keyboardInfo,
+        this.getKeyboardHeightFromAvoidArea(this.keyboardHeight),
+      );
+      this.currentKeyboardAnimationDuration = this.getKeyboardDurationFromKeyboardInfo(keyboardInfo);
+      Logger.info('###turboModule native keyboardWillShow', JSON.stringify(keyboardInfo));
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, height, this.currentKeyboardAnimationDuration);
+    };
+    this.keyboardWillHideCallback = (keyboardInfo: window.KeyboardInfo) => {
+      if (!this.enabled) {
+        return;
+      }
+      this.currentKeyboardAnimationDuration = this.getKeyboardDurationFromKeyboardInfo(keyboardInfo);
+      Logger.info('###turboModule native keyboardWillHide', JSON.stringify(keyboardInfo));
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0, this.currentKeyboardAnimationDuration);
+    };
+
+    try {
+      this.currentWindow.on('keyboardWillShow', this.keyboardWillShowCallback);
+      this.currentWindow.on('keyboardWillHide', this.keyboardWillHideCallback);
+      this.nativeKeyboardWillEventEnabled = true;
+      Logger.info('###turboModule native keyboard will events enabled');
+      return true;
+    } catch (exception) {
+      Logger.error('### Failed to enable native keyboard will events, fallback to keyboardHeightChange. Cause: ' + JSON.stringify(exception));
+      this.unregisterNativeKeyboardWillEvents();
+    }
+
+    return false;
+  }
+
+  private unregisterNativeKeyboardWillEvents(): void {
+    if (!this.currentWindow) {
+      this.nativeKeyboardWillEventEnabled = false;
+      return;
+    }
+
+    try {
+      if (this.keyboardWillShowCallback) {
+        this.currentWindow.off('keyboardWillShow', this.keyboardWillShowCallback);
+      }
+      if (this.keyboardWillHideCallback) {
+        this.currentWindow.off('keyboardWillHide', this.keyboardWillHideCallback);
+      }
+    } catch (exception) {
+      Logger.error('### Failed to close native keyboard will events. Cause: ' + JSON.stringify(exception));
+    }
+
+    this.keyboardWillShowCallback = undefined;
+    this.keyboardWillHideCallback = undefined;
+    this.nativeKeyboardWillEventEnabled = false;
+  }
+
+  private unregisterKeyboardHeightChangeEvent(): void {
+    if (!this.currentWindow || !this.keyboardHeightChangeCallback) {
+      return;
+    }
+
+    try {
+      this.currentWindow.off('keyboardHeightChange', this.keyboardHeightChangeCallback);
+      Logger.info('### close keyboardHeightChange observer');
+    } catch (exception) {
+      Logger.error('### Failed to close the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
+    }
+
+    this.keyboardHeightChangeCallback = undefined;
   }
 
   private async startKeyboardObserver(open:boolean) {
@@ -208,23 +333,23 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       return
     }
     if(!open){
-      try {
-        Logger.info("###turboModule Close KeyboardObserver");
-        this.currentWindow.off('keyboardHeightChange', (data) => {
-          this.keyboardStatus = KeyboardStatusType.HIDE;
-          this.keyboardHeight = 0;
-          Logger.info('### close keyboardHeightChange observer');
-        });
-      } catch (exception) {
-        Logger.error('### Failed to close the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
-      }
+      Logger.info("###turboModule Close KeyboardObserver");
+      this.unregisterNativeKeyboardWillEvents();
+      this.unregisterKeyboardHeightChangeEvent();
+      this.keyboardStatus = KeyboardStatusType.HIDE;
+      this.keyboardHeight = 0;
+      this.focusedInputTarget = -1;
     }else{
+      const nativeWillRegistered = this.registerNativeKeyboardWillEvents();
+      Logger.info('###turboModule keyboard will event source', nativeWillRegistered ? 'native' : 'keyboardHeightChange');
       try {
-        this.currentWindow.on('keyboardHeightChange', (data) => {
-          const keyboardAvoidArea = this.currentWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
-          let height = Math.ceil(px2vp(keyboardAvoidArea.height))
+        this.unregisterKeyboardHeightChangeEvent();
+        this.keyboardHeightChangeCallback = (data) => {
+          let height = this.getKeyboardHeightFromAvoidArea(Math.ceil(px2vp(data)))
           if(open){
-            if(this.keyboardHeight == height ){
+            const previousHeight = this.keyboardHeight || 0;
+
+            if(previousHeight == height ){
               return
             }
             if (height > 0) {
@@ -233,11 +358,12 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
               this.keyboardStatus = KeyboardStatusType.HIDE;
             }
             this.keyboardHeight = height;
-            this.keyboardControllerEventHandle(this.keyboardStatus, height);
+            this.keyboardControllerEventHandle(previousHeight, height, !this.nativeKeyboardWillEventEnabled);
             this.ctx.rnInstance.postMessageToCpp('keyboardHeightChange', height);
           }
 
-        });
+        };
+        this.currentWindow.on('keyboardHeightChange', this.keyboardHeightChangeCallback);
       } catch (exception) {
         Logger.error('Failed to enable the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
       }

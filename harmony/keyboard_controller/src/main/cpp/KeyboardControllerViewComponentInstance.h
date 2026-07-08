@@ -71,6 +71,8 @@ public:
     void onChange(std::string text, std::string extendStr) override;
     void onBlur() override;
     void onFocus() override;
+    void onContentSizeChange(ArkUINode* node, float width, float height) override;
+    void onTextSelectionChange(ArkUINode* node, int32_t location, int32_t length) override;
     void onTextSelectionChange(int32_t location, int32_t length) override;
 
 protected:
@@ -85,7 +87,15 @@ private:
     std::vector<TextInputComponentInstance::Shared> textInputVector{};
     CustomNode m_customNode{};
     ComponentInstance::Shared currentResponder;
+    bool skipNextDeprecatedSelectionEvent = false;
     void findTextInputComponents(ComponentInstance::Shared const &parentComponentInstance);
+    TextInputComponentInstance::Shared findFocusedInput();
+    TextInputComponentInstance::Shared findInputByNode(ArkUINode* node);
+    facebook::react::Point getAbsoluteOrigin(ComponentInstance::Shared const &componentInstance);
+    int findParentScrollViewTarget(ComponentInstance::Shared const &componentInstance);
+    void emitFocusedInputLayout(TextInputComponentInstance::Shared const &input);
+    void emitNoFocusedInputLayout();
+    void emitFocusedInputSelection(ArkUINode* node, int32_t location, int32_t length);
     void setWindowSystemBarEnable();
     void startKeyboardObserver();
     void closeKeyboardObserver();
