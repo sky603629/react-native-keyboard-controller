@@ -29,9 +29,46 @@
 #include <folly/dynamic.h>
 #include <iostream>
 #include <arkui/native_interface_focus.h>
+#include "react/renderer/components/textinput/TextInputProps.h"
 
 namespace rnoh {
 using KeyboardControllerStatus = rnoh::KeyboardControllerStatus;
+
+// KeyboardType 枚举(RN 标准 14 值集合) -> RN KeyboardTypeOptions 字符串
+// 对齐 JS 层 TextInputProps["keyboardType"] 期望值
+static std::string keyboardTypeToString(facebook::react::KeyboardType type) {
+    switch (type) {
+        case facebook::react::KeyboardType::Default:
+            return "default";
+        case facebook::react::KeyboardType::EmailAddress:
+            return "email-address";
+        case facebook::react::KeyboardType::Numeric:
+            return "numeric";
+        case facebook::react::KeyboardType::PhonePad:
+            return "phone-pad";
+        case facebook::react::KeyboardType::NumberPad:
+            return "number-pad";
+        case facebook::react::KeyboardType::DecimalPad:
+            return "decimal-pad";
+        case facebook::react::KeyboardType::ASCIICapable:
+            return "ascii-capable";
+        case facebook::react::KeyboardType::NumbersAndPunctuation:
+            return "numbers-and-punctuation";
+        case facebook::react::KeyboardType::URL:
+            return "url";
+        case facebook::react::KeyboardType::NamePhonePad:
+            return "name-phone-pad";
+        case facebook::react::KeyboardType::Twitter:
+            return "twitter";
+        case facebook::react::KeyboardType::WebSearch:
+            return "web-search";
+        case facebook::react::KeyboardType::ASCIICapableNumberPad:
+            return "ascii-capable-number-pad";
+        case facebook::react::KeyboardType::VisiblePassword:
+            return "visible-password";
+    }
+    return "default";
+}
 KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance(Context context)
     : CppComponentInstance(std::move(context)), ArkTSMessageHub::Observer(m_deps->arkTSMessageHub) {
     DLOG(INFO) << "KeyboardControllerViewComponentInstance";
@@ -107,6 +144,8 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
     if (message.name == "keyboardHeightChange") {
         double height = message.payload.getDouble();
         DLOG(INFO) << "keyboardHeightChange: " << height;
+        // 兜底: 刷新 ArkTS 的焦点输入框缓存(本次事件已太晚, 服务下一次键盘事件)
+        this->postFocusedInputChanged();
         if (height > 0) {
             this->keyboardStatus = KeyboardControllerStatus::SHOW;
             this->keyboardHeight = height;
@@ -270,6 +309,8 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
 
 void KeyboardControllerViewComponentInstance::onFocus() {
     DLOG(INFO) << "onKeyboardControllerView onFocus";
+    // 早期推送焦点输入框 {target, type} 给 ArkTS(早于键盘弹起事件), 供 will/did payload 使用
+    this->postFocusedInputChanged();
     auto focusedInput = findFocusedTextInput();
     int focusedTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
     bool shouldDispatchFocusKeyboardEvents =
@@ -367,6 +408,32 @@ TextInputComponentInstance::Shared KeyboardControllerViewComponentInstance::find
         }
     }
     return nullptr;
+}
+
+void KeyboardControllerViewComponentInstance::postFocusedInputChanged() {
+    if (!this->enabled) {
+        return;
+    }
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+    int target = static_cast<int>(focusedInput->getTag());
+    std::string typeStr = "default";
+    // 动态转换取 keyboardType; cast 失败(非 TextInputProps)时 type 兜底 "default", target 仍真实
+    auto textInputProps = std::dynamic_pointer_cast<const facebook::react::TextInputProps>(
+        focusedInput->getProps());
+    if (textInputProps) {
+        typeStr = keyboardTypeToString(textInputProps->traits.keyboardType);
+    }
+    auto rnInstancePtr = this->m_deps->rnInstance.lock();
+    if (rnInstancePtr != nullptr) {
+        folly::dynamic payload = folly::dynamic::object
+            ("target", target)
+            ("type", typeStr);
+        DLOG(INFO) << "###cpp postFocusedInputChanged target=" << target << " type=" << typeStr;
+        rnInstancePtr->postMessageToArkTS("focusedInputChanged", std::move(payload));
+    }
 }
 
 int KeyboardControllerViewComponentInstance::findParentScrollViewTarget(ComponentInstance::Shared const &input) {
