@@ -1,7 +1,8 @@
-import React, { forwardRef, useCallback, useMemo } from "react";
-import { findNodeHandle } from "react-native";
+import React, { forwardRef, useCallback, useEffect, useMemo } from "react";
+import { findNodeHandle, Platform } from "react-native";
 import Reanimated, {
   interpolate,
+  runOnUI,
   scrollTo,
   useAnimatedReaction,
   useAnimatedRef,
@@ -15,6 +16,7 @@ import {
   useReanimatedFocusedInput,
   useWindowDimensions,
 } from "../../hooks";
+import { useKeyboardContext } from "../../context";
 
 import { useSmoothKeyboardHandler } from "./useSmoothKeyboardHandler";
 import { debounce, scrollDistanceWithRespectToSnapPoints } from "./utils";
@@ -110,8 +112,17 @@ const KeyboardAwareScrollView = forwardRef<
     const scrollBeforeKeyboardMovement = useSharedValue(0);
     const { input } = useReanimatedFocusedInput();
     const layout = useSharedValue<FocusedInputLayoutChangedEvent | null>(null);
+    const { requestSystemKeyboardAvoidanceDisabled } = useKeyboardContext();
 
     const { height } = useWindowDimensions();
+
+    useEffect(() => {
+      if ((Platform.OS as string) !== "harmony") {
+        return;
+      }
+
+      return requestSystemKeyboardAvoidanceDisabled();
+    }, [requestSystemKeyboardAvoidanceDisabled]);
 
     const onRef = useCallback((assignedRef: Reanimated.ScrollView) => {
       if (typeof ref === "function") {
@@ -339,9 +350,16 @@ const KeyboardAwareScrollView = forwardRef<
       [maybeScroll, disableScrollOnKeyboardHide, syncKeyboardFrame],
     );
 
+    useEffect(() => {
+      runOnUI(maybeScroll)(keyboardHeight.value, true);
+    }, [bottomOffset]);
+
     useAnimatedReaction(
       () => input.value,
       (current, previous) => {
+        if (current?.target !== previous?.target) {
+          layout.value = current;
+        }
         if (
           current?.target === previous?.target &&
           current?.layout.height !== previous?.layout.height

@@ -39,6 +39,7 @@ protected:
         object.setProperty(rt, "statusBarTranslucent", "bool");
         object.setProperty(rt, "navigationBarTranslucent", "bool");
         object.setProperty(rt, "preserveEdgeToEdge", "bool");
+        object.setProperty(rt, "disableSystemKeyboardAvoidance", "bool");
         return object;
     }
 

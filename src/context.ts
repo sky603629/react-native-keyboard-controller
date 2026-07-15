@@ -25,6 +25,7 @@ export type KeyboardAnimationContext = {
   setKeyboardHandlers: (handlers: KeyboardHandlers) => void;
   setInputHandlers: (handlers: FocusedInputHandlers) => void;
   setEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  requestSystemKeyboardAvoidanceDisabled: () => () => void;
 };
 const NOOP = () => {};
 const NESTED_NOOP = () => NOOP;
@@ -54,6 +55,7 @@ const defaultContext: KeyboardAnimationContext = {
   setKeyboardHandlers: NESTED_NOOP,
   setInputHandlers: NESTED_NOOP,
   setEnabled: NOOP,
+  requestSystemKeyboardAvoidanceDisabled: NESTED_NOOP,
 };
 export const KeyboardContext = createContext(defaultContext);
 export const useKeyboardContext = () => {

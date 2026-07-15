@@ -58,10 +58,11 @@ inline const char KeyboardControllerViewName[] = "RNKeyboardControllerView";
 
 class KeyboardControllerViewProps : public ViewProps {
 public:
-    bool enabled;
-    bool statusBarTranslucent;
-    bool navigationBarTranslucent;
-    bool preserveEdgeToEdge;
+    bool enabled = false;
+    bool statusBarTranslucent = false;
+    bool navigationBarTranslucent = false;
+    bool preserveEdgeToEdge = false;
+    bool disableSystemKeyboardAvoidance = false;
     KeyboardControllerViewProps() = default;
 
     KeyboardControllerViewProps(const PropsParserContext &context, const KeyboardControllerViewProps &sourceProps,
@@ -72,7 +73,9 @@ public:
                                                     sourceProps.statusBarTranslucent, {false})),
           navigationBarTranslucent(convertRawProp(context, rawProps, "navigationBarTranslucent",
                                                         sourceProps.navigationBarTranslucent, {false})),
-          preserveEdgeToEdge(convertRawProp(context, rawProps, "preserveEdgeToEdge", sourceProps.preserveEdgeToEdge, {false})){}
+          preserveEdgeToEdge(convertRawProp(context, rawProps, "preserveEdgeToEdge", sourceProps.preserveEdgeToEdge, {false})),
+          disableSystemKeyboardAvoidance(convertRawProp(context, rawProps, "disableSystemKeyboardAvoidance",
+                                                        sourceProps.disableSystemKeyboardAvoidance, {false})){}
 };
 
 using KeyboardControllerViewShadowNode =

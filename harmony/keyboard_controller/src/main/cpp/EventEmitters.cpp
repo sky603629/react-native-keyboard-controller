@@ -75,6 +75,16 @@ void KeyboardControllerViewEventEmitter::onKeyboardMoveInteractive(MoveEvent eve
 void KeyboardControllerViewEventEmitter::onFocusedInputLayoutChanged(InputLayoutEvent event) const {
     dispatchEvent("FocusedInputLayoutChanged", [event = std::move(event)](jsi::Runtime &runtime) {
         auto payload = jsi::Object(runtime);
+        payload.setProperty(runtime, "target", event.target);
+        payload.setProperty(runtime, "parentScrollViewTarget", event.parentScrollViewTarget);
+        auto layout = jsi::Object(runtime);
+        layout.setProperty(runtime, "absoluteX", event.layout.absoluteX);
+        layout.setProperty(runtime, "absoluteY", event.layout.absoluteY);
+        layout.setProperty(runtime, "x", event.layout.x);
+        layout.setProperty(runtime, "y", event.layout.y);
+        layout.setProperty(runtime, "width", event.layout.width);
+        layout.setProperty(runtime, "height", event.layout.height);
+        payload.setProperty(runtime, "layout", std::move(layout));
         return payload;
     });
 }

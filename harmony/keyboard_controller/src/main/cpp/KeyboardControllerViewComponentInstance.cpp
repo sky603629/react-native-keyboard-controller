@@ -38,6 +38,14 @@ KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance
 
     m_customNode.setCustomNodeDelegate(this);
 }
+
+KeyboardControllerViewComponentInstance::~KeyboardControllerViewComponentInstance() {
+    if (this->disableSystemKeyboardAvoidance) {
+        this->disableSystemKeyboardAvoidance = false;
+        this->updateKeyboardAvoidMode();
+    }
+}
+
 void KeyboardControllerViewComponentInstance::onChildInserted(ComponentInstance::Shared const &childComponentInstance,
                                                               std::size_t index) {
     CppComponentInstance::onChildInserted(childComponentInstance, index);
@@ -53,11 +61,22 @@ void KeyboardControllerViewComponentInstance::onChildRemoved(ComponentInstance::
 
 void KeyboardControllerViewComponentInstance::onPropsChanged(SharedConcreteProps const &props) {
     DLOG(INFO) << "###onPropsChanged" << props->enabled << props->statusBarTranslucent
-               << props->navigationBarTranslucent << props->preserveEdgeToEdge;
+               << props->navigationBarTranslucent << props->preserveEdgeToEdge
+               << props->disableSystemKeyboardAvoidance;
     CppComponentInstance::onPropsChanged(props);
-    if (this->enabled != props->enabled) {
+    bool enabledChanged = this->enabled != props->enabled;
+    bool keyboardAvoidanceChanged =
+        this->disableSystemKeyboardAvoidance != props->disableSystemKeyboardAvoidance;
+    if (enabledChanged) {
         this->enabled = props->enabled;
+    }
+    if (keyboardAvoidanceChanged) {
+        this->disableSystemKeyboardAvoidance = props->disableSystemKeyboardAvoidance;
+    }
+    if (enabledChanged) {
         this->startKeyboardObserver();
+    } else if (keyboardAvoidanceChanged) {
+        this->updateKeyboardAvoidMode();
     }
     if (this->navigationBarTranslucent != props->navigationBarTranslucent) {
         this->navigationBarTranslucent = props->navigationBarTranslucent;
@@ -76,6 +95,9 @@ void KeyboardControllerViewComponentInstance::onPropsChanged(SharedConcreteProps
 void KeyboardControllerViewComponentInstance::onCommandReceived(std::string const &commandName,
                                                                 folly::dynamic const &args) {
     CppComponentInstance::onCommandReceived(commandName, args);
+    if (commandName == "synchronizeFocusedInputLayout") {
+        syncUpLayout();
+    }
 }
 
 ArkUINode &KeyboardControllerViewComponentInstance::getLocalRootArkUINode() { return m_customNode; }
@@ -98,6 +120,11 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
         }
         if (height == 0) {
             this->keyboardStatus = KeyboardControllerStatus::HIDE;
+            this->keyboardHeight = 0;
+            this->m_lastFocusedInputTarget = -1;
+        }
+        if (this->enabled) {
+            syncUpLayout();
         }
         this->keyboardHeightChangeHandle();
     }
@@ -120,7 +147,17 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
     if (rnInstancePtr != nullptr) {
         auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
         auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
-        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled});
+        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled, this->disableSystemKeyboardAvoidance});
+    }
+}
+
+void KeyboardControllerViewComponentInstance::updateKeyboardAvoidMode() {
+    auto rnInstancePtr = this->m_deps->rnInstance.lock();
+    if (rnInstancePtr != nullptr) {
+        auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
+        auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
+        arkTsTurboModule->callSync("setKeyboardAvoidModeEnabled",
+                                   {this->enabled && this->disableSystemKeyboardAvoidance});
     }
 }
 
@@ -128,19 +165,23 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
 void KeyboardControllerViewComponentInstance::keyboardHeightChangeHandle() {
     auto rnInstancePtr = this->m_deps->rnInstance.lock();
     if (rnInstancePtr != nullptr && this->enabled) {
+        auto focusedInput = findFocusedTextInput();
+        int eventTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
         if (this->keyboardStatus == KeyboardControllerStatus::HIDE) {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {this->keyboardHeight, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {0, 0, 0, m_tag};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {0, 0, 0, eventTarget};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {0, 0, 0, eventTarget};
             m_eventEmitter->onKeyboardMoveStart(start);
               m_eventEmitter->onKeyboardMove(end);
             m_eventEmitter->onKeyboardMoveEnd(end);
         } else {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {0, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {this->keyboardHeight, 1, 0, m_tag};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {this->keyboardHeight, 0, 0, eventTarget};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {this->keyboardHeight, 1, 0, eventTarget};
             m_eventEmitter->onKeyboardMoveStart(start);
              m_eventEmitter->onKeyboardMove(end);
             m_eventEmitter->onKeyboardMoveEnd(end);
         }
+        this->m_lastFocusedInputTarget =
+            this->keyboardStatus == KeyboardControllerStatus::HIDE ? -1 : eventTarget;
     }
 }
 
@@ -188,6 +229,7 @@ void KeyboardControllerViewComponentInstance::onChange(std::string text) {
     facebook::react::KeyboardControllerViewEventEmitter::TextChangeEvent event = {text};
     if(this->enabled){
         m_eventEmitter->onFocusedInputTextChanged(event);
+        syncUpLayout();
      }
 
 }
@@ -228,10 +270,40 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
 
 void KeyboardControllerViewComponentInstance::onFocus() {
     DLOG(INFO) << "onKeyboardControllerView onFocus";
+    auto focusedInput = findFocusedTextInput();
+    int focusedTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
+    bool shouldDispatchFocusKeyboardEvents =
+        this->enabled &&
+        this->keyboardStatus == KeyboardControllerStatus::SHOW &&
+        this->keyboardHeight > 0 &&
+        this->m_lastFocusedInputTarget != -1 &&
+        focusedTarget != -1 &&
+        this->m_lastFocusedInputTarget != focusedTarget;
     this->focusDidSet();
+    syncUpLayout();
+    if (shouldDispatchFocusKeyboardEvents && m_eventEmitter) {
+        facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {
+            this->keyboardHeight, 1, 0, focusedTarget};
+        facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {
+            this->keyboardHeight, 1, 0, focusedTarget};
+        m_eventEmitter->onKeyboardMoveStart(start);
+        m_eventEmitter->onKeyboardMoveEnd(end);
+    }
+    if (focusedTarget != -1) {
+        this->m_lastFocusedInputTarget = focusedTarget;
+    }
 }
 
-void KeyboardControllerViewComponentInstance::onBlur() { DLOG(INFO) << " onKeyboardControllerView onBlur"; }
+void KeyboardControllerViewComponentInstance::onBlur() {
+    DLOG(INFO) << " onKeyboardControllerView onBlur";
+    m_lastLayoutEvent = FocusedInputLayoutData{};
+    if (m_eventEmitter && this->enabled) {
+        facebook::react::KeyboardControllerViewEventEmitter::InputLayoutEvent payload = {};
+        payload.target = -1;
+        payload.parentScrollViewTarget = -1;
+        m_eventEmitter->onFocusedInputLayoutChanged(payload);
+    }
+}
 
 /**
  * 设置焦点到指定方向的输入框
@@ -284,5 +356,94 @@ void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& dire
         DLOG(INFO) << "setFocusTo: no target input found in direction " << direction;
     }
     this->textInputVector.clear();
+}
+
+TextInputComponentInstance::Shared KeyboardControllerViewComponentInstance::findFocusedTextInput() {
+    auto allInputs = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
+    for (auto &input : allInputs) {
+        ArkUINode &node = input->getLocalRootArkUINode();
+        if (node.isFocused()) {
+            return input;
+        }
+    }
+    return nullptr;
+}
+
+int KeyboardControllerViewComponentInstance::findParentScrollViewTarget(ComponentInstance::Shared const &input) {
+    auto parent = input->getParent().lock();
+    while (parent != nullptr) {
+        std::string name = parent->getComponentName();
+        if (name.find("ScrollView") != std::string::npos) {
+            return static_cast<int>(parent->getTag());
+        }
+        parent = parent->getParent().lock();
+    }
+    return -1;
+}
+
+double KeyboardControllerViewComponentInstance::pxToVp(double px) const {
+    auto pointScaleFactor = this->getLayoutMetrics().pointScaleFactor;
+    if (pointScaleFactor == 0.0) {
+        return px;
+    }
+    return px / pointScaleFactor;
+}
+
+void KeyboardControllerViewComponentInstance::syncUpLayout() {
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+
+    ArkUI_NodeHandle handle = focusedInput->getLocalRootArkUINode().getArkUINodeHandle();
+    if (handle == nullptr) {
+        return;
+    }
+
+    ArkUI_IntOffset windowOffset{};
+    ArkUI_IntOffset localOffset{};
+    ArkUI_IntSize size{};
+    int32_t windowRet = OH_ArkUI_NodeUtils_GetLayoutPositionInWindow(handle, &windowOffset);
+    int32_t localRet = OH_ArkUI_NodeUtils_GetLayoutPosition(handle, &localOffset);
+    int32_t sizeRet = OH_ArkUI_NodeUtils_GetLayoutSize(handle, &size);
+    if (windowRet != ARKUI_ERROR_CODE_NO_ERROR ||
+        localRet != ARKUI_ERROR_CODE_NO_ERROR ||
+        sizeRet != ARKUI_ERROR_CODE_NO_ERROR) {
+        DLOG(WARNING) << "syncUpLayout: measure failed windowRet=" << windowRet
+                      << " localRet=" << localRet << " sizeRet=" << sizeRet;
+        return;
+    }
+
+    FocusedInputLayoutData event;
+    event.absoluteX = pxToVp(static_cast<double>(windowOffset.x));
+    event.absoluteY = pxToVp(static_cast<double>(windowOffset.y));
+    event.x = pxToVp(static_cast<double>(localOffset.x));
+    event.y = pxToVp(static_cast<double>(localOffset.y));
+    event.width = pxToVp(static_cast<double>(size.width));
+    event.height = pxToVp(static_cast<double>(size.height));
+    event.target = static_cast<int>(focusedInput->getTag());
+    event.parentScrollViewTarget = findParentScrollViewTarget(focusedInput);
+
+    dispatchLayoutToJS(event);
+}
+
+void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLayoutData const &event) {
+    if (event == m_lastLayoutEvent) {
+        return;
+    }
+
+    m_lastLayoutEvent = event;
+    if (m_eventEmitter && this->enabled) {
+        facebook::react::KeyboardControllerViewEventEmitter::InputLayoutEvent payload = {};
+        payload.target = event.target;
+        payload.parentScrollViewTarget = event.parentScrollViewTarget;
+        payload.layout.absoluteX = event.absoluteX;
+        payload.layout.absoluteY = event.absoluteY;
+        payload.layout.x = event.x;
+        payload.layout.y = event.y;
+        payload.layout.width = event.width;
+        payload.layout.height = event.height;
+        m_eventEmitter->onFocusedInputLayoutChanged(payload);
+    }
 }
 } // namespace rnoh
