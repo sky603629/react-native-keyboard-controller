@@ -278,8 +278,17 @@ void KeyboardControllerViewComponentInstance::onChange(std::string text, std::st
 }
 
 void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t location, int32_t length) {
-    DLOG(INFO) << " onKeyboardControllerView onTextSelectionChange";
-    // to do
+    DLOG(INFO) << " onKeyboardControllerView onTextSelectionChange loc=" << location << " len=" << length;
+    if (!this->enabled) {
+        return;
+    }
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+    int target = static_cast<int>(focusedInput->getTag());
+    // start=location, end=location+length(0=单光标); x/y 暂置 0(在 dispatchSelectionToJS 内填)
+    dispatchSelectionToJS(target, location, location + length);
 };
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
@@ -510,7 +519,29 @@ void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLay
         payload.layout.y = event.y;
         payload.layout.width = event.width;
         payload.layout.height = event.height;
+        DLOG(INFO) << "###cpp dispatchLayoutToJS target=" << event.target
+                   << " parent=" << event.parentScrollViewTarget
+                   << " absY=" << event.absoluteY << " height=" << event.height;
         m_eventEmitter->onFocusedInputLayoutChanged(payload);
     }
+}
+
+void KeyboardControllerViewComponentInstance::dispatchSelectionToJS(
+    int target, int32_t startPos, int32_t endPos) {
+    if (!m_eventEmitter || !this->enabled) {
+        return;
+    }
+    // position 填字符索引; x/y 暂置 0(鸿蒙 NDK 无按字符 offset 取坐标接口, 见 plan)
+    facebook::react::KeyboardControllerViewEventEmitter::InputSectionEvent event = {};
+    event.target = target;
+    event.selection.start.x = 0;
+    event.selection.start.y = 0;
+    event.selection.start.position = startPos;
+    event.selection.end.x = 0;
+    event.selection.end.y = 0;
+    event.selection.end.position = endPos;
+    DLOG(INFO) << "###cpp dispatchSelectionToJS target=" << target
+               << " start.position=" << startPos << " end.position=" << endPos;
+    m_eventEmitter->onFocusedInputSelectionChanged(event);
 }
 } // namespace rnoh
