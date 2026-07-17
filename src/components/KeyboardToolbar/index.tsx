@@ -78,7 +78,7 @@ const goToPrevField = () => KeyboardControllerNative.setFocusTo("prev");
 const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
   content,
   theme = colors,
-  doneText,
+  doneText = "Done",
   button,
   icon,
   showArrows = true,
@@ -179,19 +179,21 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
         <View style={styles.flex} testID={TEST_ID_KEYBOARD_TOOLBAR_CONTENT}>
           {content}
         </View>
-        <ButtonContainer
-          accessibilityLabel="Done"
-          accessibilityHint="Will close the keyboard"
-          onPress={onPressDone}
-          testID={TEST_ID_KEYBOARD_TOOLBAR_DONE}
-          rippleRadius={28}
-          style={styles.doneButtonContainer}
-          theme={theme}
-        >
-          <Text style={doneStyle} maxFontSizeMultiplier={1.3}>
-            {doneText || "Done"}
-          </Text>
-        </ButtonContainer>
+        {doneText && (
+          <ButtonContainer
+            accessibilityLabel="Done"
+            accessibilityHint="Will close the keyboard"
+            onPress={onPressDone}
+            testID={TEST_ID_KEYBOARD_TOOLBAR_DONE}
+            rippleRadius={28}
+            style={styles.doneButtonContainer}
+            theme={theme}
+          >
+            <Text style={doneStyle} maxFontSizeMultiplier={1.3}>
+              {doneText}
+            </Text>
+          </ButtonContainer>
+        )}
       </View>
     </KeyboardStickyView>
   );
