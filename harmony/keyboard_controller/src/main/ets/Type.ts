@@ -30,7 +30,9 @@ export  enum  KeyboardControllerEventName {
   KEYBOARD_DID_SHOW="KeyboardController::keyboardDidShow",
   KEYBOARD_WILL_HIDE="KeyboardController::keyboardWillHide",
   KEYBOARD_DID_HIDE="KeyboardController::keyboardDidHide",
-  FOCUS_DID_SET="KeyboardController::focusDidSet"
+  FOCUS_DID_SET="KeyboardController::focusDidSet",
+  // 上游 #16: JS 主动同步焦点 layout 完成后的完成信号
+  LAYOUT_DID_SYNCHRONIZE="KeyboardController::layoutDidSynchronize",
 }
 export type KeyboardChangeResult = {
   code:number;

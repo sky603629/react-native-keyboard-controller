@@ -61,13 +61,18 @@ export function useKeyboardHandler(
 export function useKeyboardController() {
   const context = useKeyboardContext();
 
-  return { setEnabled: context.setEnabled, enabled: context.enabled };
+  return {
+    setEnabled: context.setEnabled,
+    enabled: context.enabled,
+    // 上游 #16: 暴露 update，便于业务主动同步焦点输入框 layout
+    update: context.update,
+  };
 }
 
 export function useReanimatedFocusedInput() {
   const context = useKeyboardContext();
 
-  return { input: context.layout };
+  return { input: context.layout, update: context.update };
 }
 
 export function useFocusedInputHandler(

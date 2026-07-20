@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
-import { KeyboardControllerView } from "./bindings";
+import {
+  FocusedInputEvents,
+  KeyboardControllerView,
+  KeyboardControllerViewCommands,
+} from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
 import { KeyboardController } from "./module";
@@ -113,10 +117,27 @@ export const KeyboardProvider = ({
   const progressSV = useSharedValue(0);
   const heightSV = useSharedValue(0);
   const layout = useSharedValue<FocusedInputLayoutChangedEvent | null>(null);
+  const viewRef = useRef<React.Component<KeyboardControllerProps>>(null);
   const [setKeyboardHandlers, broadcastKeyboardEvents] =
     useSharedHandlers<KeyboardHandler>();
   const [setInputHandlers, broadcastInputEvents] =
     useSharedHandlers<FocusedInputHandler>();
+  // 上游 #16 (14ededa4): JS 侧主动同步焦点输入框 layout，等待原生 layoutDidSynchronize
+  const update = useCallback(async () => {
+    KeyboardControllerViewCommands.synchronizeFocusedInputLayout(
+      viewRef.current,
+    );
+
+    await new Promise((resolve) => {
+      const subscription = FocusedInputEvents.addListener(
+        "layoutDidSynchronize",
+        () => {
+          subscription.remove();
+          resolve(null);
+        },
+      );
+    });
+  }, []);
   const requestSystemKeyboardAvoidanceDisabled = useCallback(() => {
     disableSystemKeyboardAvoidanceRequests.current += 1;
     setDisableSystemKeyboardAvoidance(true);
@@ -144,12 +165,13 @@ export const KeyboardProvider = ({
       animated: { progress: progress, height: Animated.multiply(height,-1)  },
       reanimated: { progress: progressSV, height: heightSV },
       layout,
+      update,
       setKeyboardHandlers,
       setInputHandlers,
       setEnabled,
       requestSystemKeyboardAvoidanceDisabled,
     }),
-    [enabled, requestSystemKeyboardAvoidanceDisabled],
+    [enabled, requestSystemKeyboardAvoidanceDisabled, update],
   );
   const style = useMemo(
     () => [
@@ -262,6 +284,7 @@ export const KeyboardProvider = ({
   return (
     <KeyboardContext.Provider value={context}>
       <KeyboardControllerViewAnimated
+        ref={viewRef}
         enabled={enabled}
         onKeyboardMoveReanimated={keyboardHandler}
         onKeyboardMoveStart={OS === "ios" ? onKeyboardMove : undefined}

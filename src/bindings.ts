@@ -37,6 +37,11 @@ export const WindowDimensionsEvents: WindowDimensionsEventsModule = {
 };
 export const KeyboardControllerView =
   View as unknown as React.FC<KeyboardControllerProps>;
+export const KeyboardControllerViewCommands = {
+  synchronizeFocusedInputLayout: (
+    _ref: React.Component<KeyboardControllerProps> | null,
+  ) => {},
+};
 export const KeyboardGestureArea =
   View as unknown as React.FC<KeyboardGestureAreaProps>;
 export const RCTOverKeyboardView =

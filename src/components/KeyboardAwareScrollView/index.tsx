@@ -1,4 +1,10 @@
-import React, { forwardRef, useCallback, useEffect, useMemo } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+} from "react";
 import { findNodeHandle, Platform } from "react-native";
 import Reanimated, {
   interpolate,
@@ -45,6 +51,20 @@ export type KeyboardAwareScrollViewProps = {
   ScrollViewComponent?: React.ComponentType<ScrollViewProps>;
 } & ScrollViewProps;
 
+/**
+ * A ref object that can be used to imperatively control the `KeyboardAwareScrollView`.
+ * Provides methods to synchronize the focused input layout and scroll to a desired position.
+ */
+export type KeyboardAwareScrollViewRef = {
+  /**
+   * Asynchronously ensures that the focused input layout is synchronized and up-to-date.
+   * Useful for scenarios where the layout may change dynamically (e.g., after images load)
+   * and you need to re-calculate the scroll position.
+   * @returns A Promise that resolves when the layout is assured to be synchronized.
+   */
+  assureFocusedInputLayoutSynced: () => Promise<void>;
+} & ScrollView;
+
 /*
  * Everything begins from `onStart` handler. This handler is called every time,
  * when keyboard changes its size or when focused `TextInput` was changed. In
@@ -84,7 +104,7 @@ export type KeyboardAwareScrollViewProps = {
  *
  */
 const KeyboardAwareScrollView = forwardRef<
-  ScrollView,
+  KeyboardAwareScrollViewRef,
   React.PropsWithChildren<KeyboardAwareScrollViewProps>
 >(
   (
@@ -110,7 +130,7 @@ const KeyboardAwareScrollView = forwardRef<
     const tag = useSharedValue(-1);
     const initialKeyboardSize = useSharedValue(0);
     const scrollBeforeKeyboardMovement = useSharedValue(0);
-    const { input } = useReanimatedFocusedInput();
+    const { input, update } = useReanimatedFocusedInput();
     const layout = useSharedValue<FocusedInputLayoutChangedEvent | null>(null);
     const { requestSystemKeyboardAvoidanceDisabled } = useKeyboardContext();
 
@@ -125,12 +145,6 @@ const KeyboardAwareScrollView = forwardRef<
     }, [requestSystemKeyboardAvoidanceDisabled]);
 
     const onRef = useCallback((assignedRef: Reanimated.ScrollView) => {
-      if (typeof ref === "function") {
-        ref(assignedRef);
-      } else if (ref) {
-        ref.current = assignedRef;
-      }
-
       scrollViewAnimatedRef(assignedRef);
     }, []);
     const onScrollViewLayout = useCallback(
@@ -242,6 +256,26 @@ const KeyboardAwareScrollView = forwardRef<
       },
       [maybeScroll],
     );
+
+    // 上游 #16: 暴露 assureFocusedInputLayoutSynced，依赖 update + scrollFromCurrentPosition
+    useImperativeHandle(
+      ref,
+      () => {
+        const view = scrollViewAnimatedRef.current as unknown as ScrollView;
+
+        const actualRef = {
+          ...view,
+          assureFocusedInputLayoutSynced: async () => {
+            await update();
+            runOnUI(scrollFromCurrentPosition)();
+          },
+        };
+
+        return actualRef as unknown as KeyboardAwareScrollViewRef;
+      },
+      [update, scrollFromCurrentPosition],
+    );
+
     const onChangeText = useCallback(() => {
       "worklet";
 

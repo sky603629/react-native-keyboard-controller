@@ -133,7 +133,13 @@ void KeyboardControllerViewComponentInstance::onCommandReceived(std::string cons
                                                                 folly::dynamic const &args) {
     CppComponentInstance::onCommandReceived(commandName, args);
     if (commandName == "synchronizeFocusedInputLayout") {
+        // 上游 #16: 主动测量焦点输入框 layout 并通知 JS
         syncUpLayout();
+        // 无论是否有焦点输入框 / layout 是否变化，都发完成信号，避免 JS Promise 挂死
+        auto rnInstancePtr = this->m_deps->rnInstance.lock();
+        if (rnInstancePtr != nullptr) {
+            rnInstancePtr->postMessageToArkTS("layoutDidSynchronize", folly::dynamic::object());
+        }
     }
 }
 

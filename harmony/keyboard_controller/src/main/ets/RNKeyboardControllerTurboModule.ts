@@ -98,6 +98,19 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       })
     );
 
+    // 上游 #16: C++ 在 synchronizeFocusedInputLayout 完成后通知 JS resolve Promise
+    this.cleanUpCallbacks.push(
+      this.ctx.rnInstance.cppEventEmitter.subscribe("layoutDidSynchronize", () => {
+        Logger.info('###turboModule received layoutDidSynchronize from cpp');
+        if (this.eventListeners.includes(KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE)) {
+          this.ctx.rnInstance.emitDeviceEvent(
+            KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE,
+            {},
+          );
+        }
+      })
+    );
+
     // 订阅 C++ 层焦点输入框信息(target + type), 由 onFocus 早期推送, 供键盘事件 payload 使用
     this.cleanUpCallbacks.push(
       this.ctx.rnInstance.cppEventEmitter.subscribe(
@@ -180,7 +193,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       KeyboardControllerEventName.KEYBOARD_DID_SHOW,
       KeyboardControllerEventName.KEYBOARD_WILL_HIDE,
       KeyboardControllerEventName.KEYBOARD_DID_HIDE,
-      KeyboardControllerEventName.FOCUS_DID_SET
+      KeyboardControllerEventName.FOCUS_DID_SET,
+      KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE,
     ];
   }
 

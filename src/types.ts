@@ -121,7 +121,16 @@ export type OverKeyboardViewProps = PropsWithChildren<{
 
 export type Direction = "next" | "prev" | "current";
 export type DismissOptions = {
+  /**
+   * A boolean property indicating whether focus should be kept on the input after dismissing the keyboard. Default is `false`.
+   */
   keepFocus: boolean;
+  /**
+   * A boolean property controlling whether dismissal should be animated. Default is `true`.
+   * On HarmonyOS there is no public API for instant (non-animated) hide; `animated` is accepted
+   * for API parity and forwarded to native (native may ignore and always use system default hide).
+   */
+  animated: boolean;
 };
 export type KeyboardControllerModule = {
   // android only
@@ -130,7 +139,7 @@ export type KeyboardControllerModule = {
   // ios only
   preload: () => void;
   // all platforms
-  dismiss: (options?: DismissOptions) => Promise<void>;
+  dismiss: (options?: Partial<DismissOptions>) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
   state: () => IKeyboardState;
@@ -144,7 +153,7 @@ export type KeyboardControllerNativeModule = {
   // ios only
   preload: () => void;
   // all platforms
-  dismiss: (keepFocus: boolean) => void;
+  dismiss: (keepFocus: boolean, animated: boolean) => void;
   setFocusTo: (direction: Direction) => void;
   // native event module stuff
   addListener: (eventName: string) => void;
@@ -174,15 +183,16 @@ export type KeyboardEventsModule = {
     cb: (e: KeyboardEventData) => void,
   ) => EmitterSubscription;
 };
-export type FocusedInputAvailableEvents = "focusDidSet";
+export type FocusedInputAvailableEvents = "focusDidSet" | "layoutDidSynchronize";
 export type FocusedInputEventData = {
   current: number;
   count: number;
 };
+// layoutDidSynchronize is a completion signal (no payload required)
 export type FocusedInputEventsModule = {
   addListener: (
     name: FocusedInputAvailableEvents,
-    cb: (e: FocusedInputEventData) => void,
+    cb: (e: FocusedInputEventData | Record<string, never>) => void,
   ) => EmitterSubscription;
 };
 export type WindowDimensionsAvailableEvents = "windowDidResize";
