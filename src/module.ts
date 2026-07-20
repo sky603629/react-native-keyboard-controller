@@ -15,7 +15,7 @@ let lastState: KeyboardState = {
   timestamp: new Date().getTime(),
   target: -1,
   type: "default",
-  appearance: "default",
+  appearance: "light",
 };
 
 const getKeyboardStateFromEvent = (event: KeyboardEventData): KeyboardState => {

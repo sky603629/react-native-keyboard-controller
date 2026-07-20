@@ -6,7 +6,7 @@ import {
 } from "../../bindings";
 import KeyboardStickyView from "../KeyboardStickyView"
 import { KeyboardControllerNative } from "../../bindings";
-import useColorScheme from "../hooks/useColorScheme";
+import { useKeyboardState } from "../../hooks";
 
 import Arrow from "./Arrow";
 import Button from "./Button";
@@ -98,7 +98,7 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
   insets,
   ...rest
 }) => {
-  const colorScheme = useColorScheme();
+  const colorScheme = useKeyboardState((state) => state.appearance);
   const [inputs, setInputs] = useState({
     current: 0,
     count: 0,
