@@ -5,6 +5,7 @@ import Reanimated, { useSharedValue } from "react-native-reanimated";
 import { KeyboardControllerView } from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
+import { KeyboardController } from "./module";
 import { applyMonkeyPatch, revertMonkeyPatch } from "./monkey-patch";
 import {
   useAnimatedKeyboardHandler,
@@ -73,6 +74,13 @@ type KeyboardProviderProps = {
    */
   preserveEdgeToEdge?: boolean;
   /**
+   * A boolean prop indicating whether to preload the keyboard to reduce time-to-interaction (TTI) on first input focus.
+   * Defaults to `true`.
+   *
+   * @platform ios
+   */
+  preload?: boolean;
+  /**
    * A boolean prop indicating whether the module is enabled. It indicate only initial state,
    * i. e. if you try to change this prop after component mount it will not have any effect.
    * To change the property in runtime use `useKeyboardController` hook and `setEnabled` method.
@@ -90,6 +98,7 @@ export const KeyboardProvider = ({
   statusBarTranslucent,
   navigationBarTranslucent,
   preserveEdgeToEdge,
+  preload = true,
   enabled: initiallyEnabled = true,
 }: KeyboardProviderProps) => {
   // state
@@ -243,6 +252,12 @@ export const KeyboardProvider = ({
       revertMonkeyPatch();
     }
   }, [enabled]);
+
+  useEffect(() => {
+    if (preload) {
+      KeyboardController.preload();
+    }
+  }, [preload]);
 
   return (
     <KeyboardContext.Provider value={context}>
