@@ -133,7 +133,7 @@ export type KeyboardControllerModule = {
   dismiss: (options?: DismissOptions) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
-  state: () => KeyboardState;
+  state: () => IKeyboardState;
   addListener: (eventName: string) => void;
   removeListeners: (count: number) => void;
 };
@@ -165,7 +165,7 @@ export type KeyboardEventData = {
   type: NonNullable<TextInputProps["keyboardType"]>;
   appearance: NonNullable<TextInputProps["keyboardAppearance"]>;
 };
-export type KeyboardState = {
+export type IKeyboardState = {
   isVisible: boolean;
 } & KeyboardEventData;
 export type KeyboardEventsModule = {

@@ -4,11 +4,11 @@ import type {
   DismissOptions,
   KeyboardControllerModule,
   KeyboardEventData,
-  KeyboardState,
+  IKeyboardState,
 } from "./types";
 
 let isClosed = false;
-let lastState: KeyboardState = {
+let lastState: IKeyboardState = {
   isVisible: false,
   height: 0,
   duration: 0,
@@ -18,7 +18,7 @@ let lastState: KeyboardState = {
   appearance: "light",
 };
 
-const getKeyboardStateFromEvent = (event: KeyboardEventData): KeyboardState => {
+const getKeyboardStateFromEvent = (event: KeyboardEventData): IKeyboardState => {
   return {
     isVisible: event.height > 0,
     ...event,
