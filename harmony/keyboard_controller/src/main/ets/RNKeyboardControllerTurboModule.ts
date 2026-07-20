@@ -48,6 +48,8 @@ interface RNKeyboardControllerSpec {
 
   setDefaultMode(): void;
 
+  preload(): void;
+
   dismiss(keepFocus: boolean): void;
 
   setFocusTo(direction: string): void;
@@ -119,6 +121,15 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
 
   setDefaultMode(): void {
     Logger.info('harmonyOS not support setDefaultMode')
+  }
+
+  /**
+   * @description 键盘预热（iOS only，鸿蒙无对应能力，no-op 对齐 Android）
+   * */
+  preload(): void {
+    // no-op on Harmony: preload 是 iOS 特有的首次键盘卡顿优化，
+    // 依赖键盘 UI 在 App 进程内惰性加载；鸿蒙键盘为系统级输入法服务，
+    // 不存在该问题。注册空方法以对齐上游 Android 的 no-op 实现。
   }
 
   /**

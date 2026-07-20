@@ -127,6 +127,8 @@ export type KeyboardControllerModule = {
   // android only
   setDefaultMode: () => void;
   setInputMode: (mode: number) => void;
+  // ios only
+  preload: () => void;
   // all platforms
   dismiss: (options?: DismissOptions) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
@@ -139,6 +141,8 @@ export type KeyboardControllerNativeModule = {
   // android only
   setDefaultMode: () => void;
   setInputMode: (mode: number) => void;
+  // ios only
+  preload: () => void;
   // all platforms
   dismiss: (keepFocus: boolean) => void;
   setFocusTo: (direction: Direction) => void;
