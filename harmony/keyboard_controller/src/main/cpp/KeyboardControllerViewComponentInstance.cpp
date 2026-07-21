@@ -103,6 +103,7 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
         if (height == 0) {
             this->keyboardStatus = KeyboardControllerStatus::HIDE;
             this->keyboardHeight = 0;
+            this->m_lastFocusedInputTarget = -1;
         }
         if (this->enabled) {
             syncUpLayout();
@@ -136,19 +137,23 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
 void KeyboardControllerViewComponentInstance::keyboardHeightChangeHandle() {
     auto rnInstancePtr = this->m_deps->rnInstance.lock();
     if (rnInstancePtr != nullptr && this->enabled) {
+        auto focusedInput = findFocusedTextInput();
+        int eventTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
         if (this->keyboardStatus == KeyboardControllerStatus::HIDE) {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {this->keyboardHeight, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {0, 0, 0, m_tag};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {0, 0, 0, eventTarget};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {0, 0, 0, eventTarget};
             m_eventEmitter->onKeyboardMoveStart(start);
               m_eventEmitter->onKeyboardMove(end);
             m_eventEmitter->onKeyboardMoveEnd(end);
         } else {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {0, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {this->keyboardHeight, 1, 0, m_tag};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {this->keyboardHeight, 0, 0, eventTarget};
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {this->keyboardHeight, 1, 0, eventTarget};
             m_eventEmitter->onKeyboardMoveStart(start);
              m_eventEmitter->onKeyboardMove(end);
             m_eventEmitter->onKeyboardMoveEnd(end);
         }
+        this->m_lastFocusedInputTarget =
+            this->keyboardStatus == KeyboardControllerStatus::HIDE ? -1 : eventTarget;
     }
 }
 
@@ -237,8 +242,28 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
 
 void KeyboardControllerViewComponentInstance::onFocus() {
     DLOG(INFO) << "onKeyboardControllerView onFocus";
+    auto focusedInput = findFocusedTextInput();
+    int focusedTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
+    bool shouldDispatchFocusKeyboardEvents =
+        this->enabled &&
+        this->keyboardStatus == KeyboardControllerStatus::SHOW &&
+        this->keyboardHeight > 0 &&
+        this->m_lastFocusedInputTarget != -1 &&
+        focusedTarget != -1 &&
+        this->m_lastFocusedInputTarget != focusedTarget;
     this->focusDidSet();
     syncUpLayout();
+    if (shouldDispatchFocusKeyboardEvents && m_eventEmitter) {
+        facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {
+            this->keyboardHeight, 1, 0, focusedTarget};
+        facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {
+            this->keyboardHeight, 1, 0, focusedTarget};
+        m_eventEmitter->onKeyboardMoveStart(start);
+        m_eventEmitter->onKeyboardMoveEnd(end);
+    }
+    if (focusedTarget != -1) {
+        this->m_lastFocusedInputTarget = focusedTarget;
+    }
 }
 
 void KeyboardControllerViewComponentInstance::onBlur() {

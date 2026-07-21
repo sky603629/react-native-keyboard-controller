@@ -1,7 +1,8 @@
-import React, { forwardRef, useCallback, useMemo } from "react";
+import React, { forwardRef, useCallback, useEffect, useMemo } from "react";
 import { findNodeHandle } from "react-native";
 import Reanimated, {
   interpolate,
+  runOnUI,
   scrollTo,
   useAnimatedReaction,
   useAnimatedRef,
@@ -339,9 +340,16 @@ const KeyboardAwareScrollView = forwardRef<
       [maybeScroll, disableScrollOnKeyboardHide, syncKeyboardFrame],
     );
 
+    useEffect(() => {
+      runOnUI(maybeScroll)(keyboardHeight.value, true);
+    }, [bottomOffset]);
+
     useAnimatedReaction(
       () => input.value,
       (current, previous) => {
+        if (current?.target !== previous?.target) {
+          layout.value = current;
+        }
         if (
           current?.target === previous?.target &&
           current?.layout.height !== previous?.layout.height

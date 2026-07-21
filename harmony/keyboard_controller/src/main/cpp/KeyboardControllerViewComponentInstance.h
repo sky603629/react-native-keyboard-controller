@@ -99,13 +99,13 @@ public:
 
 protected:
 private:
-    bool enabled;
-    bool statusBarTranslucent;
-    bool navigationBarTranslucent;
-    bool preserveEdgeToEdge;
-    double keyboardHeight;
+    bool enabled = false;
+    bool statusBarTranslucent = false;
+    bool navigationBarTranslucent = false;
+    bool preserveEdgeToEdge = false;
+    double keyboardHeight = 0;
     std::map<std::string, std::any> dictionary;
-    int keyboardStatus;
+    int keyboardStatus = KeyboardControllerStatus::HIDE;
     std::vector<TextInputComponentInstance::Shared> textInputVector{};
     CustomNode m_customNode{};
     ComponentInstance::Shared currentResponder;
@@ -123,6 +123,7 @@ private:
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
     FocusedInputLayoutData m_lastLayoutEvent;
+    int m_lastFocusedInputTarget = -1;
     void *high_lib_handle = NULL;
     ArkUI_ErrorCode (*focusRequestMethod)(ArkUI_NodeHandle node);
 };
