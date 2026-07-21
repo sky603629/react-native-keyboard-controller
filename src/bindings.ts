@@ -7,6 +7,7 @@ import type {
   KeyboardEventsModule,
   KeyboardGestureAreaProps,
   OverKeyboardViewProps,
+  KeyboardToolbarGroupViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
 import type { EmitterSubscription } from "react-native";
@@ -46,3 +47,9 @@ export const KeyboardGestureArea =
   View as unknown as React.FC<KeyboardGestureAreaProps>;
 export const RCTOverKeyboardView =
   View as unknown as React.FC<OverKeyboardViewProps>;
+
+/**
+ * Marker view for KeyboardToolbar.Group — scopes Prev/Next focus traversal.
+ */
+export const RCTKeyboardToolbarGroupView =
+  View as unknown as React.FC<KeyboardToolbarGroupViewProps>;

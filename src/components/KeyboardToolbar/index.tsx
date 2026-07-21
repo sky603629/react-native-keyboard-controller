@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import {
   FocusedInputEvents,
+  RCTKeyboardToolbarGroupView,
 } from "../../bindings";
 import KeyboardStickyView from "../KeyboardStickyView"
 import { KeyboardControllerNative } from "../../bindings";
@@ -233,4 +234,7 @@ const styles = StyleSheet.create({
 });
 
 export { colors as DefaultKeyboardToolbarTheme };
+/** Scopes Prev/Next focus to inputs inside this group (native marker). */
+(KeyboardToolbar as any).Group = RCTKeyboardToolbarGroupView;
+
 export default KeyboardToolbar;

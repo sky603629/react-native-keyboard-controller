@@ -7,6 +7,7 @@ import type {
   KeyboardEventsModule,
   KeyboardGestureAreaProps,
   OverKeyboardViewProps,
+  KeyboardToolbarGroupViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
 
@@ -63,3 +64,9 @@ export const KeyboardGestureArea: React.FC<KeyboardGestureAreaProps> =
     : ({ children }: KeyboardGestureAreaProps) => children;
 export const RCTOverKeyboardView: React.FC<OverKeyboardViewProps> =
   require("./specs/OverKeyboardViewNativeComponent").default;
+
+/**
+ * Marker view for KeyboardToolbar.Group — scopes Prev/Next focus traversal.
+ */
+export const RCTKeyboardToolbarGroupView: React.FC<KeyboardToolbarGroupViewProps> =
+  require("./specs/KeyboardToolbarGroupViewNativeComponent").default;

@@ -1,29 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-/**
- * MIT License
- *
- * Copyright (C) 2024 Huawei Device Co., Ltd.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
 
 #ifndef VIEW_HIERARCHY_NAVIGATOR_H
 #define VIEW_HIERARCHY_NAVIGATOR_H
@@ -37,74 +14,53 @@
 namespace rnoh {
 
 /**
- * ViewHierarchyNavigator - 视图层级导航器
- * 
- * 通过遍历组件树来查找下一个/上一个输入框，
- * 实现逻辑与 iOS 版本保持一致。
+ * ViewHierarchyNavigator - focus traversal for Toolbar Prev/Next.
+ * Aligns with upstream Android/iOS: when focus is inside KeyboardToolbarGroupView,
+ * scanning does not leave the group (sibling groups / outside inputs are skipped).
  */
 class ViewHierarchyNavigator {
 public:
-    /**
-     * 设置焦点到指定方向的输入框
-     * @param direction 方向 "next" | "prev"
-     * @param currentFocus 当前焦点的组件实例
-     * @return 找到的目标输入框，如果没有则返回nullptr
-     */
     static TextInputComponentInstance::Shared setFocusTo(
         const std::string& direction,
         ComponentInstance::Shared currentFocus
     );
 
-    /**
-     * 获取指定组件树下的所有输入框
-     * @param rootComponent 根组件
-     * @return 所有输入框的列表
-     */
     static std::vector<TextInputComponentInstance::Shared> getAllInputFields(
         ComponentInstance::Shared rootComponent
     );
 
-private:
-    /**
-     * 根据方向查找输入框
-     * @param currentFocus 当前焦点组件
-     * @param direction "next" 或 "prev"
-     * @return 找到的输入框，如果没有则返回nullptr
-     */
-    static TextInputComponentInstance::Shared findTextInputInDirection(
-        ComponentInstance::Shared currentFocus,
-        const std::string& direction
+    /** Closest KeyboardToolbarGroupView ancestor, or nullptr. */
+    static ComponentInstance::Shared findGroupAncestor(
+        ComponentInstance::Shared component
     );
 
-    /**
-     * 在视图层级中查找输入框（递归向下）
-     * @param component 要搜索的组件
-     * @param direction 方向，影响遍历顺序
-     * @return 找到的输入框，如果没有则返回nullptr
-     */
+    static bool isToolbarGroupComponent(ComponentInstance::Shared component);
+
+private:
+    static TextInputComponentInstance::Shared findTextInputInDirection(
+        ComponentInstance::Shared currentFocus,
+        const std::string& direction,
+        ComponentInstance::Shared groupBoundary
+    );
+
     static TextInputComponentInstance::Shared findTextInputInHierarchy(
         ComponentInstance::Shared component,
         const std::string& direction
     );
 
-    /**
-     * 查找输入框或递归深入
-     * @param child 子组件
-     * @param direction 方向
-     * @return 找到的输入框，如果没有则返回nullptr
-     */
     static TextInputComponentInstance::Shared findTextInputOrGoDeeper(
         ComponentInstance::Shared child,
         const std::string& direction
     );
 
-    /**
-     * 检查组件是否是有效的输入框
-     * @param component 要检查的组件
-     * @return 如果是有效输入框则返回转换后的指针，否则返回nullptr
-     */
     static TextInputComponentInstance::Shared isValidTextInput(
         ComponentInstance::Shared component
+    );
+
+    static void collectInputFields(
+        ComponentInstance::Shared component,
+        std::vector<TextInputComponentInstance::Shared>& out,
+        bool stopAtNestedGroups
     );
 };
 
