@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
@@ -94,6 +94,9 @@ export const KeyboardProvider = ({
 }: KeyboardProviderProps) => {
   // state
   const [enabled, setEnabled] = useState(initiallyEnabled);
+  const [disableSystemKeyboardAvoidance, setDisableSystemKeyboardAvoidance] =
+    useState(false);
+  const disableSystemKeyboardAvoidanceRequests = useRef(0);
   // animated values
   const progress = useAnimatedValue(0);
   const height = useAnimatedValue(0);
@@ -105,6 +108,26 @@ export const KeyboardProvider = ({
     useSharedHandlers<KeyboardHandler>();
   const [setInputHandlers, broadcastInputEvents] =
     useSharedHandlers<FocusedInputHandler>();
+  const requestSystemKeyboardAvoidanceDisabled = useCallback(() => {
+    disableSystemKeyboardAvoidanceRequests.current += 1;
+    setDisableSystemKeyboardAvoidance(true);
+
+    let released = false;
+    return () => {
+      if (released) {
+        return;
+      }
+
+      released = true;
+      disableSystemKeyboardAvoidanceRequests.current = Math.max(
+        0,
+        disableSystemKeyboardAvoidanceRequests.current - 1,
+      );
+      if (disableSystemKeyboardAvoidanceRequests.current === 0) {
+        setDisableSystemKeyboardAvoidance(false);
+      }
+    };
+  }, []);
   // memo
   const context = useMemo<KeyboardAnimationContext>(
     () => ({
@@ -115,8 +138,9 @@ export const KeyboardProvider = ({
       setKeyboardHandlers,
       setInputHandlers,
       setEnabled,
+      requestSystemKeyboardAvoidanceDisabled,
     }),
-    [enabled],
+    [enabled, requestSystemKeyboardAvoidanceDisabled],
   );
   const style = useMemo(
     () => [
@@ -235,6 +259,7 @@ export const KeyboardProvider = ({
         navigationBarTranslucent={navigationBarTranslucent}
         statusBarTranslucent={statusBarTranslucent}
         preserveEdgeToEdge={preserveEdgeToEdge}
+        disableSystemKeyboardAvoidance={disableSystemKeyboardAvoidance}
         style={styles.container}
       >
         {children}

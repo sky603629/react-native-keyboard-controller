@@ -88,6 +88,7 @@ export type KeyboardControllerProps = {
   statusBarTranslucent?: boolean;
   navigationBarTranslucent?: boolean;
   preserveEdgeToEdge?: boolean;
+  disableSystemKeyboardAvoidance?: boolean;
   enabled?: boolean;
 } & ViewProps;
 

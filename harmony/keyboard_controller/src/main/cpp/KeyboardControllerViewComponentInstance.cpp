@@ -39,6 +39,13 @@ KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance
     m_customNode.setCustomNodeDelegate(this);
 }
 
+KeyboardControllerViewComponentInstance::~KeyboardControllerViewComponentInstance() {
+    if (this->disableSystemKeyboardAvoidance) {
+        this->disableSystemKeyboardAvoidance = false;
+        this->updateKeyboardAvoidMode();
+    }
+}
+
 void KeyboardControllerViewComponentInstance::onChildInserted(ComponentInstance::Shared const &childComponentInstance,
                                                               std::size_t index) {
     CppComponentInstance::onChildInserted(childComponentInstance, index);
@@ -54,11 +61,22 @@ void KeyboardControllerViewComponentInstance::onChildRemoved(ComponentInstance::
 
 void KeyboardControllerViewComponentInstance::onPropsChanged(SharedConcreteProps const &props) {
     DLOG(INFO) << "###onPropsChanged" << props->enabled << props->statusBarTranslucent
-               << props->navigationBarTranslucent << props->preserveEdgeToEdge;
+               << props->navigationBarTranslucent << props->preserveEdgeToEdge
+               << props->disableSystemKeyboardAvoidance;
     CppComponentInstance::onPropsChanged(props);
-    if (this->enabled != props->enabled) {
+    bool enabledChanged = this->enabled != props->enabled;
+    bool keyboardAvoidanceChanged =
+        this->disableSystemKeyboardAvoidance != props->disableSystemKeyboardAvoidance;
+    if (enabledChanged) {
         this->enabled = props->enabled;
+    }
+    if (keyboardAvoidanceChanged) {
+        this->disableSystemKeyboardAvoidance = props->disableSystemKeyboardAvoidance;
+    }
+    if (enabledChanged) {
         this->startKeyboardObserver();
+    } else if (keyboardAvoidanceChanged) {
+        this->updateKeyboardAvoidMode();
     }
     if (this->navigationBarTranslucent != props->navigationBarTranslucent) {
         this->navigationBarTranslucent = props->navigationBarTranslucent;
@@ -129,7 +147,17 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
     if (rnInstancePtr != nullptr) {
         auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
         auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
-        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled});
+        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled, this->disableSystemKeyboardAvoidance});
+    }
+}
+
+void KeyboardControllerViewComponentInstance::updateKeyboardAvoidMode() {
+    auto rnInstancePtr = this->m_deps->rnInstance.lock();
+    if (rnInstancePtr != nullptr) {
+        auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
+        auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
+        arkTsTurboModule->callSync("setKeyboardAvoidModeEnabled",
+                                   {this->enabled && this->disableSystemKeyboardAvoidance});
     }
 }
 

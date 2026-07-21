@@ -75,6 +75,7 @@ class KeyboardControllerViewComponentInstance
       public ArkTSMessageHub::Observer {
 public:
     KeyboardControllerViewComponentInstance(Context context);
+    ~KeyboardControllerViewComponentInstance();
     void onKeyboardMoveStart();
     void onKeyboardMove();
     void onKeyboardMoveEnd();
@@ -103,6 +104,7 @@ private:
     bool statusBarTranslucent = false;
     bool navigationBarTranslucent = false;
     bool preserveEdgeToEdge = false;
+    bool disableSystemKeyboardAvoidance = false;
     double keyboardHeight = 0;
     std::map<std::string, std::any> dictionary;
     int keyboardStatus = KeyboardControllerStatus::HIDE;
@@ -112,6 +114,7 @@ private:
     void findTextInputComponents(ComponentInstance::Shared const &parentComponentInstance);
     void setWindowSystemBarEnable();
     void startKeyboardObserver();
+    void updateKeyboardAvoidMode();
     void closeKeyboardObserver();
     void keyboardHeightChangeHandle();
     void setWindowLayoutFullScreen();

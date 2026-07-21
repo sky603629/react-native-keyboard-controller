@@ -34,6 +34,7 @@ import { KeyboardControllerEventName, KeyboardStatusType } from './Type';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { JSON } from '@kit.ArkTS';
 import { ConfigurationConstant } from '@kit.AbilityKit';
+import { KeyboardAvoidMode } from '@kit.ArkUI';
 
 declare function px2vp(px: number): number;
 
@@ -61,6 +62,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
   private currentWindow:window.Window;
   private enabled:boolean;
   private cleanUpCallbacks: (() => void)[] = [];
+  private previousKeyboardAvoidMode: KeyboardAvoidMode | undefined = undefined;
+  private keyboardAvoidModeControlled: boolean = false;
   constructor(ctx) {
     super(ctx);
     this.context = this.ctx.uiAbilityContext;
@@ -199,7 +202,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     }
   }
 
-  private async startKeyboardObserver(open:boolean) {
+  private async startKeyboardObserver(open:boolean, disableSystemKeyboardAvoidance: boolean = false) {
     Logger.info("###turboModule startKeyboardObserver",String(open));
     this.enabled=open;
     this.currentWindow = await window.getLastWindow(this.context);
@@ -207,6 +210,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       throw ('windowInstance is null')
       return
     }
+    this.setKeyboardAvoidModeEnabled(open && disableSystemKeyboardAvoidance);
     if(!open){
       try {
         Logger.info("###turboModule Close KeyboardObserver");
@@ -243,6 +247,30 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       }
     }
 
+  }
+
+  private setKeyboardAvoidModeEnabled(enabled: boolean): void {
+    try {
+      if (!this.currentWindow) {
+        return;
+      }
+      const uiContext = this.currentWindow.getUIContext();
+      if (enabled) {
+        if (!this.keyboardAvoidModeControlled) {
+          this.previousKeyboardAvoidMode = uiContext.getKeyboardAvoidMode();
+          this.keyboardAvoidModeControlled = true;
+        }
+        uiContext.setKeyboardAvoidMode(KeyboardAvoidMode.NONE);
+      } else if (this.keyboardAvoidModeControlled) {
+        if (this.previousKeyboardAvoidMode !== undefined) {
+          uiContext.setKeyboardAvoidMode(this.previousKeyboardAvoidMode);
+        }
+        this.previousKeyboardAvoidMode = undefined;
+        this.keyboardAvoidModeControlled = false;
+      }
+    } catch (exception) {
+      Logger.error('Failed to update KeyboardAvoidMode. Cause: ' + JSON.stringify(exception));
+    }
   }
 
   private getKeyboardAppearance(): String {

@@ -1,5 +1,5 @@
-import React, { forwardRef, useCallback, useMemo } from "react";
-import { View } from "react-native";
+import React, { forwardRef, useCallback, useEffect, useMemo } from "react";
+import { Platform, View } from "react-native";
 import Reanimated, {
   interpolate,
   runOnUI,
@@ -9,6 +9,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 
 import { useWindowDimensions } from "../../hooks";
+import { useKeyboardContext } from "../../context";
 
 import { useKeyboardAnimation, useTranslateAnimation } from "./hooks";
 
@@ -88,6 +89,15 @@ const KeyboardAvoidingView = forwardRef<
     const { translate, padding } = useTranslateAnimation();
     const keyboard = useKeyboardAnimation();
     const { height: screenHeight } = useWindowDimensions();
+    const { requestSystemKeyboardAvoidanceDisabled } = useKeyboardContext();
+
+    useEffect(() => {
+      if ((Platform.OS as string) !== "harmony") {
+        return;
+      }
+
+      return requestSystemKeyboardAvoidanceDisabled();
+    }, [requestSystemKeyboardAvoidanceDisabled]);
 
     const relativeKeyboardHeight = useCallback(() => {
       "worklet";
