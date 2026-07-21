@@ -123,6 +123,9 @@ private:
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     TextInputComponentInstance::Shared findFocusedTextInput();
+    // 推送焦点输入框信息 {target, keyboardType} 给 ArkTS, 供键盘事件 payload 使用
+    // 在 onFocus(早期, 早于键盘事件) 和 onMessageReceived(keyboardHeightChange 兜底) 调用
+    void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
     FocusedInputLayoutData m_lastLayoutEvent;
