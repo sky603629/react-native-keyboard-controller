@@ -88,7 +88,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     // 订阅 C++ 层发来的 focusDidSet 消息
     this.cleanUpCallbacks.push(
       this.ctx.rnInstance.cppEventEmitter.subscribe("focusDidSet", (payload: { current: number, count: number }) => {
-        Logger.info('###turboModule received focusDidSet from cpp', String(payload.current) + ',' + String(payload.count));
+        Logger.info('KC_GROUP focusDidSet from cpp current=' + String(payload.current) + ' count=' + String(payload.count));
+        console.info('[KC_GROUP] ets focusDidSet current=' + String(payload.current) + ' count=' + String(payload.count));
         if (this.eventListeners.includes(KeyboardControllerEventName.FOCUS_DID_SET)) {
           this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.FOCUS_DID_SET, {
             current: payload.current,
@@ -163,6 +164,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
   }
 
   setFocusTo(direction: string): void {
+    Logger.info('KC_GROUP setFocusTo -> cpp dir=' + direction);
+    console.info('[KC_GROUP] ets setFocusTo dir=' + direction);
     this.ctx.rnInstance.postMessageToCpp('setFocusTo', direction);
   }
 

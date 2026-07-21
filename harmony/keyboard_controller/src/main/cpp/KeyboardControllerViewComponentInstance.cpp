@@ -27,9 +27,20 @@
 
 #include "KeyboardControllerViewComponentInstance.h"
 #include <folly/dynamic.h>
+#include <functional>
 #include <iostream>
 #include <arkui/native_interface_focus.h>
 #include "react/renderer/components/textinput/TextInputProps.h"
+
+// Unified tag for Group focus debugging (match JS console + ETS Logger)
+#include <hilog/log.h>
+#ifndef KC_GROUP_LOG
+#define KC_GROUP_DOMAIN 0xD001C00
+#define KC_GROUP_TAG "KC_GROUP"
+#define KC_GROUP_LOG(fmt, ...) \
+    OH_LOG_Print(LOG_APP, LOG_INFO, KC_GROUP_DOMAIN, KC_GROUP_TAG, fmt, ##__VA_ARGS__)
+#endif
+
 
 namespace rnoh {
 using KeyboardControllerStatus = rnoh::KeyboardControllerStatus;
@@ -88,6 +99,14 @@ void KeyboardControllerViewComponentInstance::onChildInserted(ComponentInstance:
     CppComponentInstance::onChildInserted(childComponentInstance, index);
     m_customNode.insertChild(childComponentInstance->getLocalRootArkUINode(), index);
     DLOG(INFO) << "###111" << childComponentInstance->getComponentName();
+    {
+        const std::string cn = childComponentInstance->getComponentName();
+        if (cn.find("KeyboardToolbarGroup") != std::string::npos ||
+            cn.find("TextInput") != std::string::npos) {
+            KC_GROUP_LOG("onChildInserted name=%{public}s tag=%{public}d",
+                cn.c_str(), static_cast<int>(childComponentInstance->getTag()));
+        }
+    }
     findTextInputComponents(childComponentInstance);
 }
 
@@ -302,7 +321,7 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
     //   group = findGroupAncestor(focus)
     //   list  = getAllInputFields(group ?: root)
     // so Toolbar Prev/Next disabled state is group-scoped.
-    auto focused = this->findFocusedTextInput();
+    auto focused = this->findFocusedTextInputDeep();
     if (!focused || !this->enabled) {
         this->textInputVector.clear();
         return;
@@ -334,6 +353,12 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
     this->textInputVector.clear();
     DLOG(INFO) << "focusDidSet groupScoped=" << (groupAncestor != nullptr)
                << " current=" << currentIndex << " count=" << count;
+    KC_GROUP_LOG("focusDidSet groupScoped=%{public}d current=%{public}d count=%{public}d focusedTag=%{public}d scanRootIsGroup=%{public}d",
+        groupAncestor != nullptr ? 1 : 0,
+        currentIndex,
+        count,
+        focused ? static_cast<int>(focused->getTag()) : -1,
+        groupAncestor != nullptr ? 1 : 0);
     if (currentIndex >= 0) {
         auto rnInstancePtr = this->m_deps->rnInstance.lock();
         if (rnInstancePtr != nullptr) {
@@ -390,26 +415,28 @@ void KeyboardControllerViewComponentInstance::onBlur() {
  * @param direction "next" | "prev"
  */
 void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& direction) {
-    // 确定当前焦点组件
-    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
-    ComponentInstance::Shared currentFocus = nullptr;
-    for (size_t i = 0; i < this->textInputVector.size(); ++i) {
-        auto& input = this->textInputVector[i];
-        ArkUINode& node = input->getLocalRootArkUINode();
-        if (node.isFocused()) {
-           currentFocus = input;
-           break;
-        }
-    }
+    KC_GROUP_LOG("setFocusTo dir=%{public}s", direction.c_str());
+    // Must locate current focus even when it lives INSIDE a Group.
+    // getAllInputFields(root) intentionally skips groups for global lists —
+    // so finding "current" must use findFocusedTextInputDeep (includes groups).
+    auto currentFocus = this->findFocusedTextInputDeep();
     if (!currentFocus) {
         DLOG(INFO) << "no current focus available";
+        KC_GROUP_LOG("setFocusTo no current focus dir=%{public}s", direction.c_str());
         return;
     }
-    // 使用 ViewHierarchyNavigator 查找目标输入框
+    {
+        auto g = ViewHierarchyNavigator::findGroupAncestor(currentFocus);
+        KC_GROUP_LOG("setFocusTo currentTag=%{public}d inGroup=%{public}d name=%{public}s",
+            static_cast<int>(currentFocus->getTag()),
+            g != nullptr ? 1 : 0,
+            currentFocus->getComponentName().c_str());
+    }
     auto targetInput = ViewHierarchyNavigator::setFocusTo(direction, currentFocus);
     if (targetInput) {
         DLOG(INFO) << "setFocusTo: found target, requesting focus, tag=" << targetInput->getTag();
-        // 获取 ArkUI_NodeHandle 并请求焦点
+        KC_GROUP_LOG("setFocusTo FOUND targetTag=%{public}d dir=%{public}s",
+            static_cast<int>(targetInput->getTag()), direction.c_str());
         ArkUINode& node = targetInput->getLocalRootArkUINode();
         ArkUI_NodeHandle nodeHandle = node.getArkUINodeHandle();
         ArkUI_ErrorCode result = ARKUI_ERROR_CODE_NO_ERROR;
@@ -430,11 +457,43 @@ void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& dire
         }
         if (!(result == ARKUI_ERROR_CODE_NO_ERROR)) {
             DLOG(WARNING) << "setFocusTo: focus request failed with error code: " << result;
+            KC_GROUP_LOG("setFocusTo focusRequest FAIL code=%{public}d", static_cast<int>(result));
+        } else {
+            KC_GROUP_LOG("setFocusTo focusRequest OK");
         }
     } else {
         DLOG(INFO) << "setFocusTo: no target input found in direction " << direction;
+        KC_GROUP_LOG("setFocusTo NOT_FOUND dir=%{public}s", direction.c_str());
     }
     this->textInputVector.clear();
+}
+
+
+TextInputComponentInstance::Shared KeyboardControllerViewComponentInstance::findFocusedTextInputDeep() {
+    // Walk entire tree including inside Groups (unlike getAllInputFields(root)).
+    std::function<TextInputComponentInstance::Shared(ComponentInstance::Shared)> dfs;
+    dfs = [&](ComponentInstance::Shared node) -> TextInputComponentInstance::Shared {
+        if (!node) {
+            return nullptr;
+        }
+        auto asInput = std::dynamic_pointer_cast<TextInputComponentInstance>(node);
+        if (asInput) {
+            ArkUINode &n = asInput->getLocalRootArkUINode();
+            if (n.isFocused()) {
+                return asInput;
+            }
+        }
+        for (const auto &child : node->getChildren()) {
+            if (auto found = dfs(child)) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+    auto focused = dfs(this->shared_from_this());
+    KC_GROUP_LOG("findFocusedTextInputDeep tag=%{public}d",
+        focused ? static_cast<int>(focused->getTag()) : -1);
+    return focused;
 }
 
 TextInputComponentInstance::Shared KeyboardControllerViewComponentInstance::findFocusedTextInput() {

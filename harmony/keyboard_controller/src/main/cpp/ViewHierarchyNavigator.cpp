@@ -5,6 +5,15 @@
 #include "ViewHierarchyNavigator.h"
 #include <glog/logging.h>
 
+#include <hilog/log.h>
+#ifndef KC_GROUP_LOG
+#define KC_GROUP_DOMAIN 0xD001C00
+#define KC_GROUP_TAG "KC_GROUP"
+#define KC_GROUP_LOG(fmt, ...) \
+    OH_LOG_Print(LOG_APP, LOG_INFO, KC_GROUP_DOMAIN, KC_GROUP_TAG, fmt, ##__VA_ARGS__)
+#endif
+
+
 namespace rnoh {
 
 namespace {
@@ -17,8 +26,9 @@ bool ViewHierarchyNavigator::isToolbarGroupComponent(
         return false;
     }
     const std::string &name = component->getComponentName();
-    return name == kToolbarGroupName ||
+    bool isGroup = name == kToolbarGroupName ||
            name.find("KeyboardToolbarGroup") != std::string::npos;
+    return isGroup;
 }
 
 ComponentInstance::Shared ViewHierarchyNavigator::findGroupAncestor(
@@ -46,6 +56,14 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::setFocusTo(
     DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo dir=" << direction
                << " tag=" << currentFocus->getTag()
                << " inGroup=" << (findGroupAncestor(currentFocus) != nullptr);
+    {
+        auto g = findGroupAncestor(currentFocus);
+        KC_GROUP_LOG("nav.setFocusTo dir=%{public}s tag=%{public}d inGroup=%{public}d name=%{public}s",
+            direction.c_str(),
+            static_cast<int>(currentFocus->getTag()),
+            g != nullptr ? 1 : 0,
+            currentFocus->getComponentName().c_str());
+    }
     return findTextInputInDirection(currentFocus, dir);
 }
 
@@ -66,6 +84,8 @@ void ViewHierarchyNavigator::collectInputFields(
     }
     for (const auto &child : component->getChildren()) {
         if (skipGroups && isToolbarGroupComponent(child)) {
+            KC_GROUP_LOG("collect SKIP group child name=%{public}s tag=%{public}d",
+                child->getComponentName().c_str(), static_cast<int>(child->getTag()));
             continue;
         }
         collectInputFields(child, out, skipGroups);
@@ -84,11 +104,15 @@ std::vector<TextInputComponentInstance::Shared> ViewHierarchyNavigator::getAllIn
             collectInputFields(child, textInputs, true);
         }
         DLOG(INFO) << "getAllInputFields(group) count=" << textInputs.size();
+        KC_GROUP_LOG("getAllInputFields(GROUP) count=%{public}zu rootTag=%{public}d",
+            textInputs.size(), static_cast<int>(rootComponent->getTag()));
         return textInputs;
     }
     // Global: skip groups entirely (ungrouped inputs only).
     collectInputFields(rootComponent, textInputs, true);
     DLOG(INFO) << "getAllInputFields(global) count=" << textInputs.size();
+    KC_GROUP_LOG("getAllInputFields(GLOBAL) count=%{public}zu rootTag=%{public}d",
+        textInputs.size(), rootComponent ? static_cast<int>(rootComponent->getTag()) : -1);
     return textInputs;
 }
 
@@ -134,6 +158,7 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
     // Do not leave the group (upstream Android).
     if (isToolbarGroupComponent(parentComponent)) {
         DLOG(INFO) << "findTextInputInDirection: hit group boundary, stop";
+        KC_GROUP_LOG("nav.boundary STOP dir=%{public}d parentIsGroup=1", direction);
         return nullptr;
     }
 

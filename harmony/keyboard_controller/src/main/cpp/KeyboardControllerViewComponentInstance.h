@@ -119,6 +119,7 @@ private:
     void keyboardHeightChangeHandle();
     void setWindowLayoutFullScreen();
     void setFocusTo(const std::string& direction);
+    TextInputComponentInstance::Shared findFocusedTextInputDeep();
     void focusDidSet();
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);

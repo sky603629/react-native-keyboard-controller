@@ -75,8 +75,14 @@ const KEYBOARD_TOOLBAR_HEIGHT = 42;
 const DEFAULT_OPACITY: HEX = "FF";
 
 const dismissKeyboard = () => KeyboardControllerNative.dismiss(false);
-const goToNextField = () => KeyboardControllerNative.setFocusTo("next");
-const goToPrevField = () => KeyboardControllerNative.setFocusTo("prev");
+const goToNextField = () => {
+  console.info("[KC_GROUP] js goToNextField -> setFocusTo(next)");
+  KeyboardControllerNative.setFocusTo("next");
+};
+const goToPrevField = () => {
+  console.info("[KC_GROUP] js goToPrevField -> setFocusTo(prev)");
+  KeyboardControllerNative.setFocusTo("prev");
+};
 
 /**
  * `KeyboardToolbar` is a component that is shown above the keyboard with `Prev`/`Next` and
@@ -109,6 +115,12 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
 
   useEffect(() => {
     const subscription = FocusedInputEvents.addListener("focusDidSet", (e) => {
+      console.info(
+        "[KC_GROUP] js Toolbar focusDidSet current=" +
+          String((e as any)?.current) +
+          " count=" +
+          String((e as any)?.count),
+      );
       setInputs(e);
     });
 
