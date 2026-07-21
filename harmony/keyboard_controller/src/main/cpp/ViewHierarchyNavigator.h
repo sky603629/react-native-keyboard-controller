@@ -14,55 +14,43 @@
 namespace rnoh {
 
 /**
- * ViewHierarchyNavigator - focus traversal for Toolbar Prev/Next.
- * Aligns with upstream Android/iOS: when focus is inside KeyboardToolbarGroupView,
- * scanning does not leave the group (sibling groups / outside inputs are skipped).
+ * Focus traversal for Toolbar Prev/Next (upstream Android-aligned).
  */
 class ViewHierarchyNavigator {
 public:
     static TextInputComponentInstance::Shared setFocusTo(
         const std::string& direction,
-        ComponentInstance::Shared currentFocus
-    );
+        ComponentInstance::Shared currentFocus);
 
     static std::vector<TextInputComponentInstance::Shared> getAllInputFields(
-        ComponentInstance::Shared rootComponent
-    );
+        ComponentInstance::Shared rootComponent);
 
-    /** Closest KeyboardToolbarGroupView ancestor, or nullptr. */
     static ComponentInstance::Shared findGroupAncestor(
-        ComponentInstance::Shared component
-    );
+        ComponentInstance::Shared component);
 
     static bool isToolbarGroupComponent(ComponentInstance::Shared component);
 
 private:
     static TextInputComponentInstance::Shared findTextInputInDirection(
         ComponentInstance::Shared currentFocus,
-        const std::string& direction,
-        ComponentInstance::Shared groupBoundary
-    );
+        int direction);
 
     static TextInputComponentInstance::Shared findTextInputInHierarchy(
         ComponentInstance::Shared component,
-        const std::string& direction
-    );
+        int direction);
 
     static TextInputComponentInstance::Shared findTextInputOrGoDeeper(
         ComponentInstance::Shared child,
-        const std::string& direction
-    );
+        int direction);
 
     static TextInputComponentInstance::Shared isValidTextInput(
-        ComponentInstance::Shared component
-    );
+        ComponentInstance::Shared component);
 
     static void collectInputFields(
         ComponentInstance::Shared component,
         std::vector<TextInputComponentInstance::Shared>& out,
-        bool stopAtNestedGroups
-    );
+        bool skipGroups);
 };
 
 } // namespace rnoh
-#endif // VIEW_HIERARCHY_NAVIGATOR_H
+#endif

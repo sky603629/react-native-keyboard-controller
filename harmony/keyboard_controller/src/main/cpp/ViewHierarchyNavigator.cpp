@@ -4,7 +4,6 @@
 
 #include "ViewHierarchyNavigator.h"
 #include <glog/logging.h>
-#include <algorithm>
 
 namespace rnoh {
 
@@ -38,28 +37,22 @@ ComponentInstance::Shared ViewHierarchyNavigator::findGroupAncestor(
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::setFocusTo(
-    const std::string& direction, ComponentInstance::Shared currentFocus) {
+    const std::string& direction,
+    ComponentInstance::Shared currentFocus) {
     if (!currentFocus) {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - currentFocus is null";
         return nullptr;
     }
-    auto group = findGroupAncestor(currentFocus);
-    DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo direction=" << direction
+    int dir = (direction == "next") ? 1 : -1;
+    DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo dir=" << direction
                << " tag=" << currentFocus->getTag()
-               << " inGroup=" << (group != nullptr);
-    auto textInput = findTextInputInDirection(currentFocus, direction, group);
-    if (textInput) {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - found target";
-    } else {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - no target";
-    }
-    return textInput;
+               << " inGroup=" << (findGroupAncestor(currentFocus) != nullptr);
+    return findTextInputInDirection(currentFocus, dir);
 }
 
 void ViewHierarchyNavigator::collectInputFields(
     ComponentInstance::Shared component,
     std::vector<TextInputComponentInstance::Shared>& out,
-    bool stopAtNestedGroups) {
+    bool skipGroups) {
     if (!component) {
         return;
     }
@@ -67,16 +60,15 @@ void ViewHierarchyNavigator::collectInputFields(
         out.push_back(ti);
         return;
     }
-    // Do not descend into nested groups when scanning from outside a group.
-    if (stopAtNestedGroups && isToolbarGroupComponent(component)) {
+    // Global scan: Group is opaque — do not include its inputs.
+    if (skipGroups && isToolbarGroupComponent(component)) {
         return;
     }
     for (const auto &child : component->getChildren()) {
-        // When root itself is a group, we still walk children but stop at nested groups.
-        if (stopAtNestedGroups && isToolbarGroupComponent(child)) {
+        if (skipGroups && isToolbarGroupComponent(child)) {
             continue;
         }
-        collectInputFields(child, out, stopAtNestedGroups);
+        collectInputFields(child, out, skipGroups);
     }
 }
 
@@ -86,33 +78,28 @@ std::vector<TextInputComponentInstance::Shared> ViewHierarchyNavigator::getAllIn
     if (!rootComponent) {
         return textInputs;
     }
-    // If root is a group, collect only inside it (do not leave group).
+    // Group as root: only inputs inside this group.
     if (isToolbarGroupComponent(rootComponent)) {
         for (const auto &child : rootComponent->getChildren()) {
             collectInputFields(child, textInputs, true);
         }
+        DLOG(INFO) << "getAllInputFields(group) count=" << textInputs.size();
         return textInputs;
     }
+    // Global: skip groups entirely (ungrouped inputs only).
     collectInputFields(rootComponent, textInputs, true);
+    DLOG(INFO) << "getAllInputFields(global) count=" << textInputs.size();
     return textInputs;
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirection(
     ComponentInstance::Shared currentFocus,
-    const std::string& direction,
-    ComponentInstance::Shared groupBoundary) {
+    int direction) {
     if (!currentFocus) {
         return nullptr;
     }
     auto parentComponent = currentFocus->getParent().lock();
     if (!parentComponent) {
-        return nullptr;
-    }
-
-    // Do not leave the group: if parent is outside groupBoundary, stop.
-    // When groupBoundary is set, stop once we would climb above the group.
-    if (groupBoundary && currentFocus.get() == groupBoundary.get()) {
-        DLOG(INFO) << "ViewHierarchyNavigator - reached group boundary, stop";
         return nullptr;
     }
 
@@ -128,17 +115,8 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
         return nullptr;
     }
 
-    if (direction == "next") {
+    if (direction > 0) {
         for (size_t i = currentIndex + 1; i < siblings.size(); ++i) {
-            // Skip other groups as opaque when outside, or nested groups
-            if (isToolbarGroupComponent(siblings[i]) &&
-                (!groupBoundary || siblings[i].get() != groupBoundary.get())) {
-                // When inside a group, siblings shouldn't be other groups typically;
-                // when outside, do not enter other groups for global next/prev of ungrouped focus.
-                if (!groupBoundary) {
-                    continue; // ungrouped focus: skip entire groups
-                }
-            }
             auto result = findTextInputOrGoDeeper(siblings[i], direction);
             if (result) {
                 return result;
@@ -146,9 +124,6 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
         }
     } else {
         for (int i = currentIndex - 1; i >= 0; --i) {
-            if (isToolbarGroupComponent(siblings[i]) && !groupBoundary) {
-                continue;
-            }
             auto result = findTextInputOrGoDeeper(siblings[i], direction);
             if (result) {
                 return result;
@@ -156,26 +131,26 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
         }
     }
 
-    // Climb: if parent is the group boundary, stop (do not leave group).
-    if (groupBoundary && parentComponent.get() == groupBoundary.get()) {
-        DLOG(INFO) << "ViewHierarchyNavigator - parent is group boundary, stop";
+    // Do not leave the group (upstream Android).
+    if (isToolbarGroupComponent(parentComponent)) {
+        DLOG(INFO) << "findTextInputInDirection: hit group boundary, stop";
         return nullptr;
     }
-    return findTextInputInDirection(parentComponent, direction, groupBoundary);
+
+    return findTextInputInDirection(parentComponent, direction);
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInHierarchy(
-    ComponentInstance::Shared component, const std::string& direction) {
+    ComponentInstance::Shared component,
+    int direction) {
     if (!component) {
         return nullptr;
     }
-    // Do not enter a group when searching "through" a sibling branch from outside.
-    // (Grouped traversal always starts inside group and never leaves.)
     if (isToolbarGroupComponent(component)) {
         return nullptr;
     }
     const auto& children = component->getChildren();
-    if (direction == "next") {
+    if (direction > 0) {
         for (const auto& child : children) {
             auto result = findTextInputOrGoDeeper(child, direction);
             if (result) {
@@ -194,16 +169,15 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInHierar
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputOrGoDeeper(
-    ComponentInstance::Shared child, const std::string& direction) {
+    ComponentInstance::Shared child,
+    int direction) {
     if (!child) {
         return nullptr;
     }
-    auto textInput = isValidTextInput(child);
-    if (textInput) {
-        return textInput;
+    if (auto ti = isValidTextInput(child)) {
+        return ti;
     }
     if (isToolbarGroupComponent(child)) {
-        // Opaque for external traversal
         return nullptr;
     }
     return findTextInputInHierarchy(child, direction);
@@ -217,10 +191,7 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::isValidTextInput(
     const std::string& name = component->getComponentName();
     if (name.find("TextInput") != std::string::npos ||
         name.find("TextArea") != std::string::npos) {
-        auto textInput = std::dynamic_pointer_cast<TextInputComponentInstance>(component);
-        if (textInput) {
-            return textInput;
-        }
+        return std::dynamic_pointer_cast<TextInputComponentInstance>(component);
     }
     return nullptr;
 }

@@ -298,28 +298,51 @@ void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t loca
 };
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
-    int currentIndex = -1;
-    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
+    // Upstream Android FocusedInputObserver:
+    //   group = findGroupAncestor(focus)
+    //   list  = getAllInputFields(group ?: root)
+    // so Toolbar Prev/Next disabled state is group-scoped.
+    auto focused = this->findFocusedTextInput();
+    if (!focused || !this->enabled) {
+        this->textInputVector.clear();
+        return;
+    }
+    ComponentInstance::Shared focusedShared = focused;
+    auto groupAncestor = ViewHierarchyNavigator::findGroupAncestor(focusedShared);
+    ComponentInstance::Shared scanRoot =
+        groupAncestor ? groupAncestor : this->shared_from_this();
+    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(scanRoot);
     int count = static_cast<int>(this->textInputVector.size());
+    int currentIndex = -1;
     for (size_t i = 0; i < this->textInputVector.size(); ++i) {
         auto& input = this->textInputVector[i];
-        ArkUINode& node = input->getLocalRootArkUINode();
-        if (node.isFocused()) {
-           currentIndex = static_cast<int>(i);
-           break;
+        if (input && input->getTag() == focused->getTag()) {
+            currentIndex = static_cast<int>(i);
+            break;
+        }
+    }
+    if (currentIndex < 0) {
+        for (size_t i = 0; i < this->textInputVector.size(); ++i) {
+            auto& input = this->textInputVector[i];
+            ArkUINode& node = input->getLocalRootArkUINode();
+            if (node.isFocused()) {
+                currentIndex = static_cast<int>(i);
+                break;
+            }
         }
     }
     this->textInputVector.clear();
-   // 发送 focusDidSet 事件到 JS 层
-    if (currentIndex >= 0 && this->enabled) {
-       auto rnInstancePtr = this->m_deps->rnInstance.lock();
-       if (rnInstancePtr != nullptr) {
-           folly::dynamic payload = folly::dynamic::object
-               ("current", currentIndex)
-               ("count", count);
-           rnInstancePtr->postMessageToArkTS("focusDidSet", payload);
-       }
-   }
+    DLOG(INFO) << "focusDidSet groupScoped=" << (groupAncestor != nullptr)
+               << " current=" << currentIndex << " count=" << count;
+    if (currentIndex >= 0) {
+        auto rnInstancePtr = this->m_deps->rnInstance.lock();
+        if (rnInstancePtr != nullptr) {
+            folly::dynamic payload = folly::dynamic::object
+                ("current", currentIndex)
+                ("count", count);
+            rnInstancePtr->postMessageToArkTS("focusDidSet", payload);
+        }
+    }
 }
 
 void KeyboardControllerViewComponentInstance::onFocus() {
