@@ -122,6 +122,9 @@ private:
     void focusDidSet();
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
+    // 推送选区变化事件 {target, selection{start{x,y,position}, end{x,y,position}}} 到 JS
+    // position 填字符索引(start=location, end=location+length); x/y 暂置 0(鸿蒙 NDK 无按 offset 取坐标接口)
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
     TextInputComponentInstance::Shared findFocusedTextInput();
     // 推送焦点输入框信息 {target, keyboardType} 给 ArkTS, 供键盘事件 payload 使用
     // 在 onFocus(早期, 早于键盘事件) 和 onMessageReceived(keyboardHeightChange 兜底) 调用

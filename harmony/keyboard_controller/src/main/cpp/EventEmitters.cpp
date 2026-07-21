@@ -98,6 +98,19 @@ void KeyboardControllerViewEventEmitter::onFocusedInputTextChanged(TextChangeEve
 void KeyboardControllerViewEventEmitter::onFocusedInputSelectionChanged(InputSectionEvent event) const {
     dispatchEvent("FocusedInputSelectionChanged", [event = std::move(event)](jsi::Runtime &runtime) {
         auto payload = jsi::Object(runtime);
+        payload.setProperty(runtime, "target", event.target);
+        auto selection = jsi::Object(runtime);
+        auto start = jsi::Object(runtime);
+        start.setProperty(runtime, "x", event.selection.start.x);
+        start.setProperty(runtime, "y", event.selection.start.y);
+        start.setProperty(runtime, "position", event.selection.start.position);
+        auto end = jsi::Object(runtime);
+        end.setProperty(runtime, "x", event.selection.end.x);
+        end.setProperty(runtime, "y", event.selection.end.y);
+        end.setProperty(runtime, "position", event.selection.end.position);
+        selection.setProperty(runtime, "start", std::move(start));
+        selection.setProperty(runtime, "end", std::move(end));
+        payload.setProperty(runtime, "selection", std::move(selection));
         return payload;
     });
 }
