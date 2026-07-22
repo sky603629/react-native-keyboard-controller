@@ -120,6 +120,8 @@ private:
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     TextInputComponentInstance::Shared findFocusedTextInput();
+    // Emit onFocusedInputSelectionChanged; x/y default 0 when caret geometry unavailable
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
     // Push focused TextInput {target, type} to ArkTS for KeyboardEvents will/did payload
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);

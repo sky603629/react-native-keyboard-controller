@@ -81,18 +81,18 @@ public:
     };
     struct InputSectionEvent {
         int target;
-        struct selection {
-            struct start {
+        struct Selection {
+            struct Start {
                 double x;
                 double y;
                 int position;
-            };
-            struct end {
+            } start;
+            struct End {
                 double x;
                 double y;
                 int position;
-            };
-        };
+            } end;
+        } selection;
     };
 
     void onKeyboardMoveStart(MoveEvent value) const;
