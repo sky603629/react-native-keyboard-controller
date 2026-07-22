@@ -40,6 +40,7 @@
 #include "RNOH/arkui/TextInputNode.h"
 #include "RNOH/arkui/TextAreaNode.h"
 #include "ViewHierarchyNavigator.h"
+#include "RNOH/arkui/NativeNodeApi.h"
 #include <arkui/native_node.h>
 #include <arkui/native_type.h>
 
@@ -121,7 +122,10 @@ private:
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     TextInputComponentInstance::Shared findFocusedTextInput();
     // Emit onFocusedInputSelectionChanged; x/y default 0 when caret geometry unavailable
-    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
+    // Emit selection; x/y are caret coords relative to input in vp (0 if unavailable)
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos, double caretX, double caretY);
+    // NODE_TEXT_INPUT/AREA_CARET_OFFSET -> index + x + y (component-relative)
+    bool readCaretOffset(ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const;
     // Push focused TextInput {target, type} to ArkTS for KeyboardEvents will/did payload
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
