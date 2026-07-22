@@ -19,7 +19,7 @@ import {
 import { useKeyboardContext } from "../../context";
 
 import { useSmoothKeyboardHandler } from "./useSmoothKeyboardHandler";
-import { debounce, scrollDistanceWithRespectToSnapPoints } from "./utils";
+import { clamp, debounce, scrollDistanceWithRespectToSnapPoints } from "./utils";
 
 import type {
   LayoutChangeEvent,
@@ -162,8 +162,20 @@ const KeyboardAwareScrollView = forwardRef<
         const absoluteY = layout.value?.layout.absoluteY || 0;
         const inputHeight = layout.value?.layout.height || 0;
         const point = absoluteY + inputHeight;
+        const gap = visibleRect - point;
 
-        if (visibleRect - point <= bottomOffset) {
+        // Harmony may report pre-scroll absoluteY on selection/text events.
+        // If we already scrolled by ~-gap, skip re-applying the same delta.
+        if (
+          gap <= bottomOffset &&
+          position.value > 1 &&
+          Math.abs(position.value + gap) < 2
+        ) {
+          return 0;
+        }
+
+
+        if (gap <= bottomOffset) {
           const relativeScrollTo =
             keyboardHeight.value - (height - point) + bottomOffset;
           const interpolatedScrollTo = interpolate(
@@ -216,31 +228,65 @@ const KeyboardAwareScrollView = forwardRef<
       [extraKeyboardSpace],
     );
 
-    const scrollFromCurrentPosition = useCallback(
-      (customHeight?: number) => {
+    const lastCaretY = useSharedValue<number | null>(null);
+    const updateLayoutFromCaretY = useCallback(
+      (caretY?: number) => {
         "worklet";
 
-        const prevScrollPosition = scrollPosition.value;
-        const prevLayout = layout.value;
-
         if (!input.value?.layout) {
-          return;
+          return false;
         }
+
+        const boxH = input.value.layout.height || 0;
+        const pick = (v?: number | null) => {
+          "worklet";
+          // y < 0 means native could not resolve caret geometry.
+          if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+            return null;
+          }
+          return clamp(v, 0, Math.max(boxH, 0));
+        };
+        const fromArg = pick(caretY);
+        const fromLast = pick(lastCaretY.value);
+        const customHeight =
+          fromArg != null ? fromArg : fromLast != null ? fromLast : boxH;
 
         // eslint-disable-next-line react-compiler/react-compiler
         layout.value = {
           ...input.value,
           layout: {
             ...input.value.layout,
-            height: customHeight ?? input.value.layout.height,
+            // Prefer caret-relative height when available (upstream-compatible).
+            height: customHeight,
           },
         };
+
+        return true;
+      },
+      [input, layout, lastCaretY],
+    );
+    const scrollFromCurrentPosition = useCallback(
+      (caretY?: number) => {
+        "worklet";
+
+        if (keyboardHeight.value <= 0) {
+          return;
+        }
+
+        const prevScrollPosition = scrollPosition.value;
+        const prevLayout = layout.value;
+
+        if (!updateLayoutFromCaretY(caretY)) {
+          return;
+        }
+
+        // Use live scroll offset as baseline (stale absoluteY is common on Harmony).
         scrollPosition.value = position.value;
         maybeScroll(keyboardHeight.value, true);
         scrollPosition.value = prevScrollPosition;
         layout.value = prevLayout;
       },
-      [maybeScroll],
+      [maybeScroll, updateLayoutFromCaretY],
     );
     const onChangeText = useCallback(() => {
       "worklet";
@@ -251,19 +297,22 @@ const KeyboardAwareScrollView = forwardRef<
         return;
       }
 
-      scrollFromCurrentPosition();
-    }, [scrollFromCurrentPosition]);
+      scrollFromCurrentPosition(lastCaretY.value ?? undefined);
+    }, [scrollFromCurrentPosition, lastCaretY]);
     const onSelectionChange = useCallback(
       (e: FocusedInputSelectionChangedEvent) => {
         "worklet";
 
-        if (e.selection.start.position !== e.selection.end.position) {
-          scrollFromCurrentPosition(e.selection.end.y);
+        const endY = e.selection.end.y;
+        if (typeof endY === "number" && Number.isFinite(endY) && endY >= 0) {
+          lastCaretY.value = endY;
+          scrollFromCurrentPosition(endY);
+        } else {
+          scrollFromCurrentPosition(lastCaretY.value ?? undefined);
         }
       },
-      [scrollFromCurrentPosition],
+      [scrollFromCurrentPosition, lastCaretY],
     );
-
     const onChangeTextHandler = useMemo(
       () => debounce(onChangeText, 200),
       [onChangeText],
@@ -405,3 +454,4 @@ const KeyboardAwareScrollView = forwardRef<
 );
 
 export default KeyboardAwareScrollView;
+

@@ -39,6 +39,7 @@
 #include "RNOH/ArkTSMessageHub.h"
 #include "RNOH/arkui/TextInputNode.h"
 #include "RNOH/arkui/TextAreaNode.h"
+#include "RNOH/arkui/NativeNodeApi.h"
 #include "ViewHierarchyNavigator.h"
 #include <arkui/native_node.h>
 #include <arkui/native_type.h>
@@ -122,12 +123,13 @@ private:
     void focusDidSet();
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
-    // 推送选区变化事件 {target, selection{start{x,y,position}, end{x,y,position}}} 到 JS
-    // position 填字符索引(start=location, end=location+length); x/y 暂置 0(鸿蒙 NDK 无按 offset 取坐标接口)
-    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
+    // Push selection to JS. position=char index; x/y=caret relative to input (vp).
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos, double caretX, double caretY);
+    // Read caret via NODE_TEXT_INPUT/AREA_CARET_OFFSET (relative component coords).
+    bool readCaretOffset(ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const;
     TextInputComponentInstance::Shared findFocusedTextInput();
-    // 推送焦点输入框信息 {target, keyboardType} 给 ArkTS, 供键盘事件 payload 使用
-    // 在 onFocus(早期, 早于键盘事件) 和 onMessageReceived(keyboardHeightChange 兜底) 调用
+    // 鎺ㄩ€佺劍鐐硅緭鍏ユ淇℃伅 {target, keyboardType} 缁?ArkTS, 渚涢敭鐩樹簨浠?payload 浣跨敤
+    // 鍦?onFocus(鏃╂湡, 鏃╀簬閿洏浜嬩欢) 鍜?onMessageReceived(keyboardHeightChange 鍏滃簳) 璋冪敤
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;

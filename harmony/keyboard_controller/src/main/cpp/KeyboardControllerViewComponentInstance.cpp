@@ -26,6 +26,7 @@
  */
 
 #include "KeyboardControllerViewComponentInstance.h"
+#include <cmath>
 #include <folly/dynamic.h>
 #include <iostream>
 #include <arkui/native_interface_focus.h>
@@ -34,8 +35,8 @@
 namespace rnoh {
 using KeyboardControllerStatus = rnoh::KeyboardControllerStatus;
 
-// KeyboardType 枚举(RN 标准 14 值集合) -> RN KeyboardTypeOptions 字符串
-// 对齐 JS 层 TextInputProps["keyboardType"] 期望值
+// KeyboardType 鏋氫妇(RN 鏍囧噯 14 鍊奸泦鍚? -> RN KeyboardTypeOptions 瀛楃涓?
+// 瀵归綈 JS 灞?TextInputProps["keyboardType"] 鏈熸湜鍊?
 static std::string keyboardTypeToString(facebook::react::KeyboardType type) {
     switch (type) {
         case facebook::react::KeyboardType::Default:
@@ -144,7 +145,7 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
     if (message.name == "keyboardHeightChange") {
         double height = message.payload.getDouble();
         DLOG(INFO) << "keyboardHeightChange: " << height;
-        // 兜底: 刷新 ArkTS 的焦点输入框缓存(本次事件已太晚, 服务下一次键盘事件)
+        // 鍏滃簳: 鍒锋柊 ArkTS 鐨勭劍鐐硅緭鍏ユ缂撳瓨(鏈浜嬩欢宸插お鏅? 鏈嶅姟涓嬩竴娆￠敭鐩樹簨浠?
         this->postFocusedInputChanged();
         if (height > 0) {
             this->keyboardStatus = KeyboardControllerStatus::SHOW;
@@ -234,7 +235,7 @@ void KeyboardControllerViewComponentInstance::setWindowLayoutFullScreen() {
 }
 
 /**
- * 遍历查找TextInput
+ * 閬嶅巻鏌ユ壘TextInput
  * */
 void KeyboardControllerViewComponentInstance::findTextInputComponents(
     ComponentInstance::Shared const &childComponentInstance) {
@@ -266,11 +267,26 @@ void KeyboardControllerViewComponentInstance::findTextInputComponents(
 
 void KeyboardControllerViewComponentInstance::onChange(std::string text) {
     facebook::react::KeyboardControllerViewEventEmitter::TextChangeEvent event = {text};
-    if(this->enabled){
+    if (this->enabled) {
         m_eventEmitter->onFocusedInputTextChanged(event);
         syncUpLayout();
-     }
-
+        // Text change moves caret; refresh geometry so KASV can anchor to caret y.
+        auto focusedInput = findFocusedTextInput();
+        if (focusedInput) {
+            int target = static_cast<int>(focusedInput->getTag());
+            ArkUINode &node = focusedInput->getLocalRootArkUINode();
+            ArkUI_NodeHandle handle = node.getArkUINodeHandle();
+            bool isTextArea = dynamic_cast<TextAreaNode *>(&node) != nullptr;
+            int32_t caretIndex = 0;
+            float caretX = 0.f;
+            float caretY = 0.f;
+            if (handle != nullptr && readCaretOffset(handle, isTextArea, caretIndex, caretX, caretY)) {
+                dispatchSelectionToJS(
+                    target, caretIndex, caretIndex,
+                    static_cast<double>(caretX), static_cast<double>(caretY));
+            }
+        }
+    }
 }
 
 void KeyboardControllerViewComponentInstance::onChange(std::string text, std::string extendStr) {
@@ -278,7 +294,6 @@ void KeyboardControllerViewComponentInstance::onChange(std::string text, std::st
 }
 
 void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t location, int32_t length) {
-    DLOG(INFO) << " onKeyboardControllerView onTextSelectionChange loc=" << location << " len=" << length;
     if (!this->enabled) {
         return;
     }
@@ -287,9 +302,19 @@ void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t loca
         return;
     }
     int target = static_cast<int>(focusedInput->getTag());
-    // start=location, end=location+length(0=单光标); x/y 暂置 0(在 dispatchSelectionToJS 内填)
-    dispatchSelectionToJS(target, location, location + length);
-};
+    ArkUINode &node = focusedInput->getLocalRootArkUINode();
+    ArkUI_NodeHandle handle = node.getArkUINodeHandle();
+    bool isTextArea = dynamic_cast<TextAreaNode *>(&node) != nullptr;
+    int32_t caretIndex = location;
+    float caretX = 0.f;
+    float caretY = 0.f;
+    bool ok = handle != nullptr && readCaretOffset(handle, isTextArea, caretIndex, caretX, caretY);
+    int32_t endPos = location + length;
+    // y=-1 signals JS to use full input height (do not treat missing caret as y=0).
+    double outX = ok ? static_cast<double>(caretX) : 0.0;
+    double outY = ok ? static_cast<double>(caretY) : -1.0;
+    dispatchSelectionToJS(target, location, endPos, outX, outY);
+}
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
     int currentIndex = -1;
@@ -304,7 +329,7 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
         }
     }
     this->textInputVector.clear();
-   // 发送 focusDidSet 事件到 JS 层
+   // 鍙戦€?focusDidSet 浜嬩欢鍒?JS 灞?
     if (currentIndex >= 0 && this->enabled) {
        auto rnInstancePtr = this->m_deps->rnInstance.lock();
        if (rnInstancePtr != nullptr) {
@@ -318,7 +343,7 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
 
 void KeyboardControllerViewComponentInstance::onFocus() {
     DLOG(INFO) << "onKeyboardControllerView onFocus";
-    // 早期推送焦点输入框 {target, type} 给 ArkTS(早于键盘弹起事件), 供 will/did payload 使用
+    // 鏃╂湡鎺ㄩ€佺劍鐐硅緭鍏ユ {target, type} 缁?ArkTS(鏃╀簬閿洏寮硅捣浜嬩欢), 渚?will/did payload 浣跨敤
     this->postFocusedInputChanged();
     auto focusedInput = findFocusedTextInput();
     int focusedTarget = focusedInput ? static_cast<int>(focusedInput->getTag()) : -1;
@@ -356,12 +381,12 @@ void KeyboardControllerViewComponentInstance::onBlur() {
 }
 
 /**
- * 设置焦点到指定方向的输入框
- * 实现逻辑仿照 iOS ViewHierarchyNavigator.swift
+ * 璁剧疆鐒︾偣鍒版寚瀹氭柟鍚戠殑杈撳叆妗?
+ * 瀹炵幇閫昏緫浠跨収 iOS ViewHierarchyNavigator.swift
  * @param direction "next" | "prev"
  */
 void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& direction) {
-    // 确定当前焦点组件
+    // 纭畾褰撳墠鐒︾偣缁勪欢
     this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
     ComponentInstance::Shared currentFocus = nullptr;
     for (size_t i = 0; i < this->textInputVector.size(); ++i) {
@@ -376,11 +401,11 @@ void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& dire
         DLOG(INFO) << "no current focus available";
         return;
     }
-    // 使用 ViewHierarchyNavigator 查找目标输入框
+    // 浣跨敤 ViewHierarchyNavigator 鏌ユ壘鐩爣杈撳叆妗?
     auto targetInput = ViewHierarchyNavigator::setFocusTo(direction, currentFocus);
     if (targetInput) {
         DLOG(INFO) << "setFocusTo: found target, requesting focus, tag=" << targetInput->getTag();
-        // 获取 ArkUI_NodeHandle 并请求焦点
+        // 鑾峰彇 ArkUI_NodeHandle 骞惰姹傜劍鐐?
         ArkUINode& node = targetInput->getLocalRootArkUINode();
         ArkUI_NodeHandle nodeHandle = node.getArkUINodeHandle();
         ArkUI_ErrorCode result = ARKUI_ERROR_CODE_NO_ERROR;
@@ -429,7 +454,7 @@ void KeyboardControllerViewComponentInstance::postFocusedInputChanged() {
     }
     int target = static_cast<int>(focusedInput->getTag());
     std::string typeStr = "default";
-    // 动态转换取 keyboardType; cast 失败(非 TextInputProps)时 type 兜底 "default", target 仍真实
+    // 鍔ㄦ€佽浆鎹㈠彇 keyboardType; cast 澶辫触(闈?TextInputProps)鏃?type 鍏滃簳 "default", target 浠嶇湡瀹?
     auto textInputProps = std::dynamic_pointer_cast<const facebook::react::TextInputProps>(
         focusedInput->getProps());
     if (textInputProps) {
@@ -527,21 +552,62 @@ void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLay
 }
 
 void KeyboardControllerViewComponentInstance::dispatchSelectionToJS(
-    int target, int32_t startPos, int32_t endPos) {
+    int target, int32_t startPos, int32_t endPos, double caretX, double caretY) {
     if (!m_eventEmitter || !this->enabled) {
         return;
     }
-    // position 填字符索引; x/y 暂置 0(鸿蒙 NDK 无按字符 offset 取坐标接口, 见 plan)
+    // position: character indices; x/y: caret relative to input (vp), aligned with iOS caretRect / Android Layout.
+    // For collapsed caret start==end geometrically; for ranges we still anchor scroll to caret end.y.
     facebook::react::KeyboardControllerViewEventEmitter::InputSectionEvent event = {};
     event.target = target;
-    event.selection.start.x = 0;
-    event.selection.start.y = 0;
+    event.selection.start.x = caretX;
+    event.selection.start.y = caretY;
     event.selection.start.position = startPos;
-    event.selection.end.x = 0;
-    event.selection.end.y = 0;
+    event.selection.end.x = caretX;
+    event.selection.end.y = caretY;
     event.selection.end.position = endPos;
-    DLOG(INFO) << "###cpp dispatchSelectionToJS target=" << target
-               << " start.position=" << startPos << " end.position=" << endPos;
     m_eventEmitter->onFocusedInputSelectionChanged(event);
 }
+
+bool KeyboardControllerViewComponentInstance::readCaretOffset(
+    ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const {
+    if (handle == nullptr) {
+        return false;
+    }
+    auto *nodeApi = NativeNodeApi::getInstance();
+    if (nodeApi == nullptr || nodeApi->getAttribute == nullptr) {
+        return false;
+    }
+
+    auto tryRead = [&](ArkUI_NodeAttributeType attr) -> bool {
+        const ArkUI_AttributeItem *item = nodeApi->getAttribute(handle, attr);
+        if (item == nullptr || item->value == nullptr || item->size < 1) {
+            return false;
+        }
+        // Documented: [i32 index, f32 x, f32 y]
+        if (item->size >= 3) {
+            index = item->value[0].i32;
+            x = item->value[1].f32;
+            y = item->value[2].f32;
+            return std::isfinite(y) && y >= 0.f;
+        }
+        // Observed on Harmony: size=2 => [i32 index, f32 y]
+        if (item->size == 2) {
+            index = item->value[0].i32;
+            x = 0.f;
+            y = item->value[1].f32;
+            return std::isfinite(y) && y >= 0.f;
+        }
+        return false;
+    };
+
+    ArkUI_NodeAttributeType primary =
+        isTextArea ? NODE_TEXT_AREA_CARET_OFFSET : NODE_TEXT_INPUT_CARET_OFFSET;
+    ArkUI_NodeAttributeType secondary =
+        isTextArea ? NODE_TEXT_INPUT_CARET_OFFSET : NODE_TEXT_AREA_CARET_OFFSET;
+    return tryRead(primary) || tryRead(secondary);
+}
 } // namespace rnoh
+
+
+
