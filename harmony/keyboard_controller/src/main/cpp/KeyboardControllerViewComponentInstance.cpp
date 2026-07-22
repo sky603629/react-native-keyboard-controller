@@ -29,9 +29,45 @@
 #include <folly/dynamic.h>
 #include <iostream>
 #include <arkui/native_interface_focus.h>
+#include "react/renderer/components/textinput/TextInputProps.h"
 
 namespace rnoh {
 using KeyboardControllerStatus = rnoh::KeyboardControllerStatus;
+
+// Map RN KeyboardType enum -> KeyboardTypeOptions string for KeyboardEventData.type
+static std::string keyboardTypeToString(facebook::react::KeyboardType type) {
+    switch (type) {
+        case facebook::react::KeyboardType::Default:
+            return "default";
+        case facebook::react::KeyboardType::EmailAddress:
+            return "email-address";
+        case facebook::react::KeyboardType::Numeric:
+            return "numeric";
+        case facebook::react::KeyboardType::PhonePad:
+            return "phone-pad";
+        case facebook::react::KeyboardType::NumberPad:
+            return "number-pad";
+        case facebook::react::KeyboardType::DecimalPad:
+            return "decimal-pad";
+        case facebook::react::KeyboardType::ASCIICapable:
+            return "ascii-capable";
+        case facebook::react::KeyboardType::NumbersAndPunctuation:
+            return "numbers-and-punctuation";
+        case facebook::react::KeyboardType::URL:
+            return "url";
+        case facebook::react::KeyboardType::NamePhonePad:
+            return "name-phone-pad";
+        case facebook::react::KeyboardType::Twitter:
+            return "twitter";
+        case facebook::react::KeyboardType::WebSearch:
+            return "web-search";
+        case facebook::react::KeyboardType::ASCIICapableNumberPad:
+            return "ascii-capable-number-pad";
+        case facebook::react::KeyboardType::VisiblePassword:
+            return "visible-password";
+    }
+    return "default";
+}
 KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance(Context context)
     : CppComponentInstance(std::move(context)), ArkTSMessageHub::Observer(m_deps->arkTSMessageHub) {
     DLOG(INFO) << "KeyboardControllerViewComponentInstance";
@@ -237,6 +273,8 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
 
 void KeyboardControllerViewComponentInstance::onFocus() {
     DLOG(INFO) << "onKeyboardControllerView onFocus";
+    // Early push focused input {target, type} for will/did payload (before keyboard events)
+    this->postFocusedInputChanged();
     this->focusDidSet();
     syncUpLayout();
 }
@@ -391,6 +429,32 @@ void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLay
         payload.layout.width = event.width;
         payload.layout.height = event.height;
         m_eventEmitter->onFocusedInputLayoutChanged(payload);
+    }
+}
+
+void KeyboardControllerViewComponentInstance::postFocusedInputChanged() {
+    if (!this->enabled) {
+        return;
+    }
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+    int target = static_cast<int>(focusedInput->getTag());
+    std::string typeStr = "default";
+    // Cast may fail for non-TextInputProps; keep target real and type default
+    auto textInputProps = std::dynamic_pointer_cast<const facebook::react::TextInputProps>(
+        focusedInput->getProps());
+    if (textInputProps) {
+        typeStr = keyboardTypeToString(textInputProps->traits.keyboardType);
+    }
+    auto rnInstancePtr = this->m_deps->rnInstance.lock();
+    if (rnInstancePtr != nullptr) {
+        folly::dynamic payload = folly::dynamic::object
+            ("target", target)
+            ("type", typeStr);
+        DLOG(INFO) << "###cpp postFocusedInputChanged target=" << target << " type=" << typeStr;
+        rnInstancePtr->postMessageToArkTS("focusedInputChanged", std::move(payload));
     }
 }
 } // namespace rnoh

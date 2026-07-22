@@ -120,6 +120,8 @@ private:
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     TextInputComponentInstance::Shared findFocusedTextInput();
+    // Push focused TextInput {target, type} to ArkTS for KeyboardEvents will/did payload
+    void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
     FocusedInputLayoutData m_lastLayoutEvent;
