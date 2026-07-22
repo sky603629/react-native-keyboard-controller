@@ -250,9 +250,38 @@ void KeyboardControllerViewComponentInstance::onChange(std::string text, std::st
 }
 
 void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t location, int32_t length) {
-    DLOG(INFO) << " onKeyboardControllerView onTextSelectionChange";
-    // to do
-};
+    DLOG(INFO) << "onKeyboardControllerView onTextSelectionChange loc=" << location << " len=" << length;
+    if (!this->enabled) {
+        return;
+    }
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+    int target = static_cast<int>(focusedInput->getTag());
+    int32_t endPos = location + length;
+    // Harmony: caret geometry (x/y) not filled in this degraded path; default 0. position is real.
+    dispatchSelectionToJS(target, location, endPos);
+}
+
+void KeyboardControllerViewComponentInstance::dispatchSelectionToJS(
+    int target, int32_t startPos, int32_t endPos) {
+    if (!m_eventEmitter || !this->enabled) {
+        return;
+    }
+    facebook::react::KeyboardControllerViewEventEmitter::InputSectionEvent event = {};
+    event.target = target;
+    event.selection.start.x = 0;
+    event.selection.start.y = 0;
+    event.selection.start.position = startPos;
+    event.selection.end.x = 0;
+    event.selection.end.y = 0;
+    event.selection.end.position = endPos;
+    DLOG(INFO) << "###cpp dispatchSelectionToJS target=" << target
+               << " start=" << startPos << " end=" << endPos << " x=0 y=0";
+    m_eventEmitter->onFocusedInputSelectionChanged(event);
+}
+
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
     int currentIndex = -1;
