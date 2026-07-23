@@ -32,7 +32,9 @@
 #define TESTER_HARMONY_KEYBOARD_CONTROLLER_SRC_MAIN_CPP_KEYBOARDCONTROLLERVIEWCOMPONENTINSTANCE_H
 
 #include <any>
+#include <optional>
 #include "RNOH/CppComponentInstance.h"
+#include "RNOH/TaskExecutor/TaskExecutor.h"
 #include "KeyboardControllerViewComponentDescriptor.h"
 #include "RNOHCorePackage/ComponentInstances/TextInputComponentInstance.h"
 #include "RNOH/arkui/CustomNode.h"
@@ -114,7 +116,7 @@ private:
     void setWindowSystemBarEnable();
     void startKeyboardObserver();
     void closeKeyboardObserver();
-    void keyboardHeightChangeHandle();
+    void keyboardHeightChangeHandle(double previousKeyboardHeight);
     void setWindowLayoutFullScreen();
     void setFocusTo(const std::string& direction);
     void focusDidSet();
@@ -130,7 +132,18 @@ private:
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
+    void cancelKeyboardAnimation();
+    void startKeyboardAnimation(double fromHeight, double toHeight, int target);
+    void scheduleKeyboardAnimationFrame(
+        uint64_t generation,
+        double fromHeight,
+        double toHeight,
+        int target,
+        int frame,
+        int totalFrames);
     FocusedInputLayoutData m_lastLayoutEvent;
+    std::optional<TaskExecutor::DelayedTask> m_keyboardAnimationTask;
+    uint64_t m_keyboardAnimationGeneration = 0;
     void *high_lib_handle = NULL;
     ArkUI_ErrorCode (*focusRequestMethod)(ArkUI_NodeHandle node);
 };

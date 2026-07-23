@@ -27,6 +27,7 @@
 
 #include "KeyboardControllerViewComponentInstance.h"
 #include "RNOH/arkui/NativeNodeApi.h"
+#include <algorithm>
 #include <cmath>
 #include <folly/dynamic.h>
 #include <iostream>
@@ -74,6 +75,12 @@ KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance
     : CppComponentInstance(std::move(context)), ArkTSMessageHub::Observer(m_deps->arkTSMessageHub) {
     DLOG(INFO) << "KeyboardControllerViewComponentInstance";
 
+    this->enabled = false;
+    this->statusBarTranslucent = false;
+    this->navigationBarTranslucent = false;
+    this->preserveEdgeToEdge = false;
+    this->keyboardHeight = 0;
+    this->keyboardStatus = KeyboardControllerStatus::HIDE;
     m_customNode.setCustomNodeDelegate(this);
 }
 
@@ -126,6 +133,7 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
     DLOG(INFO) << "onMessageReceived";
     if (message.name == "keyboardHeightChange") {
         double height = message.payload.getDouble();
+        double previousKeyboardHeight = this->keyboardHeight;
         DLOG(INFO) << "keyboardHeightChange: " << height;
         if (height > 0) {
             this->keyboardStatus = KeyboardControllerStatus::SHOW;
@@ -140,12 +148,15 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
         }
         if (height == 0) {
             this->keyboardStatus = KeyboardControllerStatus::HIDE;
-            this->keyboardHeight = 0;
+            this->keyboardHeight = previousKeyboardHeight > 0 ? previousKeyboardHeight : 0;
         }
         if (this->enabled) {
             syncUpLayout();
         }
-        this->keyboardHeightChangeHandle();
+        this->keyboardHeightChangeHandle(previousKeyboardHeight);
+        if (height == 0) {
+            this->keyboardHeight = 0;
+        }
     }
     if (message.name == "setFocusTo") {
         std::string direction = message.payload.getString();
@@ -166,28 +177,101 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
     if (rnInstancePtr != nullptr) {
         auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
         auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
-        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled});
+        arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled, true});
     }
 }
 
 
-void KeyboardControllerViewComponentInstance::keyboardHeightChangeHandle() {
+void KeyboardControllerViewComponentInstance::keyboardHeightChangeHandle(double previousKeyboardHeight) {
     auto rnInstancePtr = this->m_deps->rnInstance.lock();
     if (rnInstancePtr != nullptr && this->enabled) {
-        if (this->keyboardStatus == KeyboardControllerStatus::HIDE) {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {this->keyboardHeight, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {0, 0, 0, m_tag};
-            m_eventEmitter->onKeyboardMoveStart(start);
-              m_eventEmitter->onKeyboardMove(end);
-            m_eventEmitter->onKeyboardMoveEnd(end);
-        } else {
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {0, 0, 0, m_tag};
-            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {this->keyboardHeight, 1, 0, m_tag};
-            m_eventEmitter->onKeyboardMoveStart(start);
-             m_eventEmitter->onKeyboardMove(end);
-            m_eventEmitter->onKeyboardMoveEnd(end);
+        int target = m_tag;
+        auto focusedInput = findFocusedTextInput();
+        if (focusedInput) {
+            target = static_cast<int>(focusedInput->getTag());
         }
+        const bool willHide = this->keyboardStatus == KeyboardControllerStatus::HIDE;
+        const double fromHeight = previousKeyboardHeight;
+        const double toHeight = willHide ? 0 : this->keyboardHeight;
+        startKeyboardAnimation(fromHeight, toHeight, target);
     }
+}
+
+void KeyboardControllerViewComponentInstance::cancelKeyboardAnimation() {
+    ++m_keyboardAnimationGeneration;
+    auto taskExecutor = m_deps->taskExecutor;
+    if (taskExecutor && m_keyboardAnimationTask.has_value()) {
+        taskExecutor->cancelDelayedTask(m_keyboardAnimationTask.value());
+    }
+    m_keyboardAnimationTask.reset();
+}
+
+void KeyboardControllerViewComponentInstance::startKeyboardAnimation(double fromHeight, double toHeight, int target) {
+    cancelKeyboardAnimation();
+    const uint64_t generation = m_keyboardAnimationGeneration;
+    constexpr int durationMs = 250;
+    constexpr int frameMs = 16;
+    const int totalFrames = std::max(1, durationMs / frameMs);
+    const double startHeight = toHeight > 0 ? toHeight : 0;
+    const double startProgress = toHeight > 0 ? 1.0 : 0.0;
+
+    facebook::react::KeyboardControllerViewEventEmitter::MoveEvent start = {
+        startHeight,
+        startProgress,
+        durationMs,
+        target};
+    m_eventEmitter->onKeyboardMoveStart(start);
+    scheduleKeyboardAnimationFrame(generation, fromHeight, toHeight, target, 1, totalFrames);
+}
+
+void KeyboardControllerViewComponentInstance::scheduleKeyboardAnimationFrame(
+    uint64_t generation,
+    double fromHeight,
+    double toHeight,
+    int target,
+    int frame,
+    int totalFrames) {
+    auto taskExecutor = m_deps->taskExecutor;
+    if (!taskExecutor || !m_eventEmitter || !this->enabled) {
+        return;
+    }
+
+    auto weakSelf = std::weak_ptr<KeyboardControllerViewComponentInstance>(
+        std::static_pointer_cast<KeyboardControllerViewComponentInstance>(shared_from_this()));
+    m_keyboardAnimationTask = taskExecutor->runDelayedTask(
+        TaskThread::MAIN,
+        [weakSelf, generation, fromHeight, toHeight, target, frame, totalFrames] {
+            auto self = weakSelf.lock();
+            if (!self || generation != self->m_keyboardAnimationGeneration || !self->m_eventEmitter || !self->enabled) {
+                return;
+            }
+
+            constexpr int durationMs = 250;
+            const double progress = static_cast<double>(frame) / static_cast<double>(totalFrames);
+            const double height = fromHeight + (toHeight - fromHeight) * progress;
+            const double denominator = std::max(fromHeight, toHeight);
+            const double eventProgress = denominator > 0 ? std::abs(height / denominator) : 0.0;
+            facebook::react::KeyboardControllerViewEventEmitter::MoveEvent move = {
+                height,
+                eventProgress,
+                durationMs,
+                target};
+            self->m_eventEmitter->onKeyboardMove(move);
+
+            if (frame >= totalFrames) {
+                facebook::react::KeyboardControllerViewEventEmitter::MoveEvent end = {
+                    toHeight,
+                    toHeight > 0 ? 1.0 : 0.0,
+                    durationMs,
+                    target};
+                self->m_eventEmitter->onKeyboardMoveEnd(end);
+                self->m_keyboardAnimationTask.reset();
+                return;
+            }
+
+            self->scheduleKeyboardAnimationFrame(generation, fromHeight, toHeight, target, frame + 1, totalFrames);
+        },
+        16);
 }
 
 void KeyboardControllerViewComponentInstance::setWindowLayoutFullScreen() {
@@ -233,8 +317,8 @@ void KeyboardControllerViewComponentInstance::findTextInputComponents(
 void KeyboardControllerViewComponentInstance::onChange(std::string text) {
     facebook::react::KeyboardControllerViewEventEmitter::TextChangeEvent event = {text};
     if(this->enabled){
-        m_eventEmitter->onFocusedInputTextChanged(event);
         syncUpLayout();
+        m_eventEmitter->onFocusedInputTextChanged(event);
      }
 
 }
