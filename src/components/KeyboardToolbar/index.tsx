@@ -22,7 +22,7 @@ export type KeyboardToolbarProps = Omit<
   "style" | "testID" | "children"
 > & {
   /** An element that is shown in the middle of the toolbar. */
-  content?: JSX.Element | null;
+  content?: React.JSX.Element | null;
   /** A set of dark/light colors consumed by toolbar component. */
   theme?: KeyboardToolbarTheme;
   /** Custom text for done button. */
@@ -51,7 +51,7 @@ export type KeyboardToolbarProps = Omit<
   /**
    * A component that applies blur effect to the toolbar.
    */
-  blur?: JSX.Element | null;
+  blur?: React.JSX.Element | null;
   /**
    * A value for container opacity in hexadecimal format (e.g. `ff`). Default value is `ff`.
    */
