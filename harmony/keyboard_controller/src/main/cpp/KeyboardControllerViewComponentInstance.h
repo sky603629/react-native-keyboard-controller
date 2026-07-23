@@ -122,6 +122,7 @@ private:
     void focusDidSet();
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
+    void dispatchKeyboardFocusChangedIfNeeded();
     TextInputComponentInstance::Shared findFocusedTextInput();
     // Emit onFocusedInputSelectionChanged; x/y default 0 when caret geometry unavailable
     // Emit selection; x/y are caret coords relative to input in vp (0 if unavailable)
@@ -142,6 +143,7 @@ private:
         int frame,
         int totalFrames);
     FocusedInputLayoutData m_lastLayoutEvent;
+    int m_lastKeyboardEventTarget = -1;
     std::optional<TaskExecutor::DelayedTask> m_keyboardAnimationTask;
     uint64_t m_keyboardAnimationGeneration = 0;
     void *high_lib_handle = NULL;

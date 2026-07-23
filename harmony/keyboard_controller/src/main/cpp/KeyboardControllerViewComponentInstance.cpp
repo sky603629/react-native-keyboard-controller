@@ -149,6 +149,7 @@ void KeyboardControllerViewComponentInstance::onMessageReceived(ArkTSMessage con
         if (height == 0) {
             this->keyboardStatus = KeyboardControllerStatus::HIDE;
             this->keyboardHeight = previousKeyboardHeight > 0 ? previousKeyboardHeight : 0;
+            m_lastKeyboardEventTarget = -1;
         }
         if (this->enabled) {
             syncUpLayout();
@@ -190,6 +191,7 @@ void KeyboardControllerViewComponentInstance::keyboardHeightChangeHandle(double 
         if (focusedInput) {
             target = static_cast<int>(focusedInput->getTag());
         }
+        m_lastKeyboardEventTarget = target;
         const bool willHide = this->keyboardStatus == KeyboardControllerStatus::HIDE;
         const double fromHeight = previousKeyboardHeight;
         const double toHeight = willHide ? 0 : this->keyboardHeight;
@@ -583,6 +585,7 @@ void KeyboardControllerViewComponentInstance::syncUpLayout() {
     event.parentScrollViewTarget = findParentScrollViewTarget(focusedInput);
 
     dispatchLayoutToJS(event);
+    dispatchKeyboardFocusChangedIfNeeded();
 }
 
 void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLayoutData const &event) {
@@ -603,6 +606,32 @@ void KeyboardControllerViewComponentInstance::dispatchLayoutToJS(FocusedInputLay
         payload.layout.height = event.height;
         m_eventEmitter->onFocusedInputLayoutChanged(payload);
     }
+}
+
+void KeyboardControllerViewComponentInstance::dispatchKeyboardFocusChangedIfNeeded() {
+    if (!this->enabled || !m_eventEmitter || this->keyboardHeight <= 0) {
+        return;
+    }
+
+    auto focusedInput = findFocusedTextInput();
+    if (!focusedInput) {
+        return;
+    }
+
+    int target = static_cast<int>(focusedInput->getTag());
+    if (m_lastKeyboardEventTarget == -1 || target == m_lastKeyboardEventTarget) {
+        return;
+    }
+
+    cancelKeyboardAnimation();
+    facebook::react::KeyboardControllerViewEventEmitter::MoveEvent event = {
+        this->keyboardHeight,
+        1.0,
+        0,
+        target};
+    m_lastKeyboardEventTarget = target;
+    m_eventEmitter->onKeyboardMoveStart(event);
+    m_eventEmitter->onKeyboardMoveEnd(event);
 }
 
 void KeyboardControllerViewComponentInstance::postFocusedInputChanged() {
