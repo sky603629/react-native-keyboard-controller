@@ -212,7 +212,7 @@ void KeyboardControllerViewComponentInstance::startKeyboardAnimation(double from
     cancelKeyboardAnimation();
     const uint64_t generation = m_keyboardAnimationGeneration;
     constexpr int durationMs = 250;
-    constexpr int frameMs = 16;
+    constexpr int frameMs = 8;
     const int totalFrames = std::max(1, durationMs / frameMs);
     const double startHeight = toHeight > 0 ? toHeight : 0;
     const double startProgress = toHeight > 0 ? 1.0 : 0.0;
