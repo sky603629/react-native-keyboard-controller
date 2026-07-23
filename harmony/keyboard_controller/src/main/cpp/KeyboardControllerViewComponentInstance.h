@@ -133,6 +133,10 @@ private:
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
+    void updateFocusedInputLayoutObserver(TextInputComponentInstance::Shared const &focusedInput);
+    void clearFocusedInputLayoutObserver();
+    void handleFocusedInputLayoutEvent(ArkUI_NodeEvent *event);
+    static void focusedInputLayoutEventReceiver(ArkUI_NodeEvent *event);
     void cancelKeyboardAnimation();
     void startKeyboardAnimation(double fromHeight, double toHeight, int target);
     void scheduleKeyboardAnimationFrame(
@@ -144,6 +148,7 @@ private:
         int totalFrames);
     FocusedInputLayoutData m_lastLayoutEvent;
     int m_lastKeyboardEventTarget = -1;
+    ArkUI_NodeHandle m_observedFocusedInputHandle = nullptr;
     std::optional<TaskExecutor::DelayedTask> m_keyboardAnimationTask;
     uint64_t m_keyboardAnimationGeneration = 0;
     void *high_lib_handle = NULL;

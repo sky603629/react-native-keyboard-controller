@@ -37,6 +37,10 @@
 namespace rnoh {
 using KeyboardControllerStatus = rnoh::KeyboardControllerStatus;
 
+namespace {
+constexpr int KBC_FOCUSED_INPUT_AREA_CHANGE_TARGET_ID = 91001;
+}
+
 // Map RN KeyboardType enum -> KeyboardTypeOptions string for KeyboardEventData.type
 static std::string keyboardTypeToString(facebook::react::KeyboardType type) {
     switch (type) {
@@ -93,6 +97,9 @@ void KeyboardControllerViewComponentInstance::onChildInserted(ComponentInstance:
 }
 
 void KeyboardControllerViewComponentInstance::onChildRemoved(ComponentInstance::Shared const &childComponentInstance) {
+    if (childComponentInstance->getLocalRootArkUINode().getArkUINodeHandle() == m_observedFocusedInputHandle) {
+        clearFocusedInputLayoutObserver();
+    }
     CppComponentInstance::onChildRemoved(childComponentInstance);
     m_customNode.removeChild(childComponentInstance->getLocalRootArkUINode());
 }
@@ -456,6 +463,7 @@ void KeyboardControllerViewComponentInstance::onFocus() {
 
 void KeyboardControllerViewComponentInstance::onBlur() {
     DLOG(INFO) << " onKeyboardControllerView onBlur";
+    clearFocusedInputLayoutObserver();
     m_lastLayoutEvent = FocusedInputLayoutData{};
     if (m_eventEmitter && this->enabled) {
         facebook::react::KeyboardControllerViewEventEmitter::InputLayoutEvent payload = {};
@@ -549,11 +557,93 @@ double KeyboardControllerViewComponentInstance::pxToVp(double px) const {
     return px / pointScaleFactor;
 }
 
+void KeyboardControllerViewComponentInstance::focusedInputLayoutEventReceiver(ArkUI_NodeEvent *event) {
+    if (event == nullptr) {
+        return;
+    }
+    auto eventType = OH_ArkUI_NodeEvent_GetEventType(event);
+    auto targetId = OH_ArkUI_NodeEvent_GetTargetId(event);
+    if (eventType != NODE_EVENT_ON_AREA_CHANGE || targetId != KBC_FOCUSED_INPUT_AREA_CHANGE_TARGET_ID) {
+        return;
+    }
+    auto instance = static_cast<KeyboardControllerViewComponentInstance *>(OH_ArkUI_NodeEvent_GetUserData(event));
+    if (instance == nullptr) {
+        return;
+    }
+    instance->handleFocusedInputLayoutEvent(event);
+}
+
+void KeyboardControllerViewComponentInstance::handleFocusedInputLayoutEvent(ArkUI_NodeEvent *event) {
+    if (!this->enabled || event == nullptr) {
+        return;
+    }
+    auto eventType = OH_ArkUI_NodeEvent_GetEventType(event);
+    if (eventType != NODE_EVENT_ON_AREA_CHANGE) {
+        return;
+    }
+    auto handle = OH_ArkUI_NodeEvent_GetNodeHandle(event);
+    if (handle == nullptr || handle != m_observedFocusedInputHandle) {
+        return;
+    }
+    syncUpLayout();
+}
+
+void KeyboardControllerViewComponentInstance::clearFocusedInputLayoutObserver() {
+    if (m_observedFocusedInputHandle == nullptr) {
+        return;
+    }
+    auto nodeApi = NativeNodeApi::getInstance();
+    nodeApi->unregisterNodeEvent(m_observedFocusedInputHandle, NODE_EVENT_ON_AREA_CHANGE);
+    nodeApi->removeNodeEventReceiver(
+        m_observedFocusedInputHandle,
+        KeyboardControllerViewComponentInstance::focusedInputLayoutEventReceiver);
+    m_observedFocusedInputHandle = nullptr;
+}
+
+void KeyboardControllerViewComponentInstance::updateFocusedInputLayoutObserver(
+    TextInputComponentInstance::Shared const &focusedInput) {
+    ArkUI_NodeHandle handle = nullptr;
+    if (focusedInput != nullptr) {
+        handle = focusedInput->getLocalRootArkUINode().getArkUINodeHandle();
+    }
+
+    if (handle == m_observedFocusedInputHandle) {
+        return;
+    }
+
+    clearFocusedInputLayoutObserver();
+    if (handle == nullptr) {
+        return;
+    }
+
+    auto nodeApi = NativeNodeApi::getInstance();
+    auto addRet = nodeApi->addNodeEventReceiver(
+        handle,
+        KeyboardControllerViewComponentInstance::focusedInputLayoutEventReceiver);
+    auto registerRet = nodeApi->registerNodeEvent(
+        handle,
+        NODE_EVENT_ON_AREA_CHANGE,
+        KBC_FOCUSED_INPUT_AREA_CHANGE_TARGET_ID,
+        this);
+    if (addRet != ARKUI_ERROR_CODE_NO_ERROR || registerRet != ARKUI_ERROR_CODE_NO_ERROR) {
+        nodeApi->unregisterNodeEvent(handle, NODE_EVENT_ON_AREA_CHANGE);
+        nodeApi->removeNodeEventReceiver(
+            handle,
+            KeyboardControllerViewComponentInstance::focusedInputLayoutEventReceiver);
+        return;
+    }
+
+    m_observedFocusedInputHandle = handle;
+}
+
 void KeyboardControllerViewComponentInstance::syncUpLayout() {
     auto focusedInput = findFocusedTextInput();
     if (!focusedInput) {
+        clearFocusedInputLayoutObserver();
         return;
     }
+
+    updateFocusedInputLayoutObserver(focusedInput);
 
     ArkUI_NodeHandle handle = focusedInput->getLocalRootArkUINode().getArkUINodeHandle();
     if (handle == nullptr) {
