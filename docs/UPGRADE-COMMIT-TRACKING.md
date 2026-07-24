@@ -54,7 +54,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `17d373c` | 同步上游 `c5c00778f2` + `e431917472`，并提前同步 `852fa4a223`：`KeyboardAwareScrollView` 支持动态 `bottomOffset` 且避免过度滚动；`KeyboardAvoidingView behavior="height"` 避免写入 0/负高度。 |
 | `0b03f32` | 已回退：曾尝试把上游 `331293a9cc` 扩展为 Harmony window keyboard listener 生命周期修复；测试发现会导致键盘事件异常，最终判断 Harmony 无 Android 同类问题，不同步该代码。 |
 | `43f6631e` | 同步上游 `a57fa4b427` + `347fef35c0`：新增 Harmony `KeyboardBackgroundView` JS fallback 与 `KeyboardExtender` Android 同级别 polyfill；实现方式与 Android 一致，和 iOS 原生 accessory / 私有键盘背景材质能力不一致。 |
-| 本次提交 | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
+| `04da6bf4` | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
 
 ## Commit 台账
 
@@ -232,9 +232,9 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已同步并验证第 `38-39 / 155` 笔：`KeyboardBackgroundView` 在 Harmony 以 JS `View` fallback 模拟键盘背景；`KeyboardExtender` 采用与 Android 一致的 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill。文档明确该方案和 iOS 原生 accessory / 私有键盘背景材质能力不一致。
 - 已同步并推送第 `40-41 / 155` 笔：`useKeyboardState(selector)` 与去除 JS `monkey-patch` 深导入依赖；已审计第 `42 / 155` 笔 iOS `shouldIgnoreKeyboardEvents` 复位问题，Harmony 无同类 UIKit responder/accessory 状态机，当前不改代码。
 - 已审计第 `43 / 155` 笔 Android `StatusBarModule` 反射修复，Harmony 使用本地 `StatusBarManagerCompat` TurboModule，无 Android Kotlin internal/reflection 同类问题，当前不改代码。
-- 已在测试工程同步第 `44 / 155` 笔 `keyboardAppearance` 外观来源改造：JS 侧 Toolbar 改用 `useKeyboardState(state => state.appearance)`，Harmony C++/ETS 从 focused TextInput `keyboardAppearance` 推导 `dark/light`，待验证。
+- 已分析第 `44 / 155` 笔 `keyboardAppearance` 外观来源改造，实测发现能力依赖 RNOH 框架 `TextInputComponentJSIBinder` 暴露 `keyboardAppearance` native prop；当前鸿蒙框架未暴露该接口，JS 传入 `light/dark` 时本库 C++ 只能读到 `default`。按“不修改框架代码”的策略，本仓不适配该 commit，记录为鸿蒙当前无可用暴露接口。
 - 已在测试工程同步第 `45 / 155` 笔 KASV selection 驱动滚动：用 `onSelectionChange` 的 caret y 替代 `onChangeText` 主驱动，并清理测试工程 KASV 旧调试日志，待验证。
 
 ## 下一步
 
-当前待测试候选：第 `44 / 155` 笔 `27fce1cc93`、第 `45 / 155` 笔 `5ab201112c`。下一笔主线源码审计是第 `46 / 155` 笔 `f963befc1a`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选：第 `45 / 155` 笔 `5ab201112c`。下一笔主线源码审计是第 `46 / 155` 笔 `f963befc1a`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。

@@ -33,7 +33,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 当前进度 | 29.0% |
 | 已代码同步并推送 | 20 |
 | 已分析-待测试 | 0 |
-| 测试工程已同步 | 2 |
+| 测试工程已同步 | 1 |
 | 已分析-不需同步 | 21 |
 | 已分析-暂不同步 | 3 |
 | 因系统能力缺失不能完全做 | 0 |
@@ -105,7 +105,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 41 | `ecb3595085` | 2025-07-01 | JS/TS+Android | refactor: do not rely on deep imports (#1000) | 代码仓已推送 | 上游移除 JS `monkey-patch`，避免依赖 `react-native/Libraries/Components/StatusBar/NativeStatusBarManagerAndroid` 深导入；Android 侧改由原生 `StatusBarManager` override 处理 edge-to-edge 兼容。Harmony 已有本地 `StatusBarManagerCompat` TurboModule 注册，但没有 Android 原生 module override 链路，本轮只同步 JS 去依赖：删除 `KeyboardProvider` 中 apply/revert monkey patch effect，并删除不再引用的 monkey-patch 文件；保留 Harmony 现有键盘事件和动画分支。 |
 | 42 | `46bb921a5d` | 2025-07-02 | iOS | fix: reset `shouldIgnoreKeyboardEvents` to `false` on `resignFirstResponder` (#996) | 已分析-不需同步 | 上游修 iOS `KeyboardGestureArea` / `InvisibleInputAccessoryView` 场景：延迟 `resignFirstResponder` 时如果 native-stack 手势关闭页面，可能没有后续 `keyboardDidAppear` 来清掉 `shouldIgnoreKeyboardEvents`，导致后续键盘事件被过滤。Harmony 搜索未发现 `shouldIgnoreKeyboardEvents`、`KeyboardEventsIgnorer`、`InvisibleInputAccessoryView`、`inputAccessoryView`、`resignFirstResponder`、`KeyboardAreaExtender` 链路；当前 KGA 通过 ArkUI touch 调 ETS `dismiss/show`，不存在 UIKit responder 延迟 detach 状态机。因此不改代码，只保留快速返回/页面切换场景的键盘事件回归。 |
 | 43 | `5a2e2a8184` | 2025-07-06 | Android | fix: use reflection for original `StatusBar` implementation discovery (#1008) | 已分析-不需同步 | 上游真实问题是 RN 0.80+ Kotlin `StatusBarModule` 变为 `internal` 后 Android 不能直接发现原始 StatusBar 实现，因此新增 `StatusBarModuleProxy` 反射代理。Harmony 当前 `StatusBarManagerCompat` 是本地 ETS/C++ TurboModule 注册路径，未使用 Android `StatusBarModule`、Kotlin internal class 或反射发现链路；无同类问题，不改代码。 |
-| 44 | `27fce1cc93` | 2025-07-08 | JS/TS+Android+iOS | feat: use `keyboardAppearance` instead of global appearance (#1004) | 测试工程已同步 | 上游把 KeyboardToolbar 外观来源从全局 color scheme 改为当前 focused TextInput 的 `keyboardAppearance`，并保证 `KeyboardEventData.appearance` 只返回 `dark/light`。Harmony 证据：RNOH `TextInputTraits` 已有 `keyboardAppearance` prop 和 `Default/Light/Dark` 枚举；测试工程已同步 JS，C++ 在 `postFocusedInputChanged` 推送 `appearance`，ETS 对 `default` 回退系统深浅色，事件最终给 JS `dark/light`。待验证 Toolbar 在不同输入框 `keyboardAppearance` 下切换颜色。 |
+| 44 | `27fce1cc93` | 2025-07-08 | JS/TS+Android+iOS | feat: use `keyboardAppearance` instead of global appearance (#1004) | 已分析-不需同步 | 上游把 KeyboardToolbar 外观来源从全局 color scheme 改为当前 focused TextInput 的 `keyboardAppearance`，并要求 native 事件最终只返回 `dark/light`。Harmony 实测结论：RNOH 底层 `TextInputTraits`/converter 虽有 `keyboardAppearance` 枚举，但当前框架 `TextInputComponentJSIBinder` 未把 `keyboardAppearance` 暴露为 native prop，JS 写 `keyboardAppearance="light/dark"` 时 C++ 只能读到 `default`。测试工程临时补框架白名单后才生效，说明该能力依赖修改 RNOH 框架代码；按当前策略不修改框架，本库不适配，记录为鸿蒙当前无可用暴露接口。 |
 | 45 | `5ab201112c` | 2025-07-09 | JS/TS | fix: rewrite `onTextChanged` to `onSelectionChanged` event handler in `KeyboardAwareScrollView` (#546) | 测试工程已同步 | 上游把 KASV 文本变化后的滚动驱动从 `onChangeText` 改为 selection caret y，解决多行输入框只按输入框整体高度判断时无法知道光标坐标的问题。Harmony 证据：当前 C++ 已通过 ArkUI `NODE_TEXT_INPUT/AREA_CARET_OFFSET` 派发 `FocusedInputSelectionChanged` 的 `end.y`；测试工程已同步 JS，加入 `clamp`、`lastSelection` 和 selection debounce 逻辑，同时移除之前 bottomOffset 排查日志。待验证多行输入/选区变化时 KASV 滚动是否跟随光标且不回归动态 bottomOffset。 |
 | 46 | `f963befc1a` | 2025-07-12 | iOS | fix: `KeyboardExtender` on iOS 26 (#1015) | 未分析 | |
 | 47 | `49979932c7` | 2025-07-13 | JS/TS+Android+iOS | feat: preload (#1016) | 未分析 | |
