@@ -88,16 +88,6 @@ KeyboardControllerViewComponentInstance::KeyboardControllerViewComponentInstance
     m_customNode.setCustomNodeDelegate(this);
 }
 
-KeyboardControllerViewComponentInstance::~KeyboardControllerViewComponentInstance() {
-    DLOG(INFO) << "~KeyboardControllerViewComponentInstance";
-    if (this->enabled) {
-        this->enabled = false;
-        this->closeKeyboardObserver();
-    }
-    clearFocusedInputLayoutObserver();
-    cancelKeyboardAnimation();
-}
-
 void KeyboardControllerViewComponentInstance::onChildInserted(ComponentInstance::Shared const &childComponentInstance,
                                                               std::size_t index) {
     CppComponentInstance::onChildInserted(childComponentInstance, index);
@@ -196,15 +186,6 @@ void KeyboardControllerViewComponentInstance::startKeyboardObserver() {
         auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
         auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
         arkTsTurboModule->callSync("startKeyboardObserver", {this->enabled, true});
-    }
-}
-
-void KeyboardControllerViewComponentInstance::closeKeyboardObserver() {
-    auto rnInstancePtr = this->m_deps->rnInstance.lock();
-    if (rnInstancePtr != nullptr) {
-        auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
-        auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
-        arkTsTurboModule->callSync("startKeyboardObserver", {false, true});
     }
 }
 

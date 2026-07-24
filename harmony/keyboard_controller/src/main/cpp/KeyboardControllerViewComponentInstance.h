@@ -78,7 +78,6 @@ class KeyboardControllerViewComponentInstance
       public ArkTSMessageHub::Observer {
 public:
     KeyboardControllerViewComponentInstance(Context context);
-    ~KeyboardControllerViewComponentInstance();
     void onKeyboardMoveStart();
     void onKeyboardMove();
     void onKeyboardMoveEnd();

@@ -34,7 +34,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `29 / 155` 笔源码相关 commit 按时间顺序分析完成，最后分析的是 `e431917472`。下一笔仍是第 `30 / 155` 笔：`76226df4d9`。
+截至第 `39 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `347fef35c0`。下一笔是第 `40 / 155` 笔：`60ec0ceab8`。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -52,6 +52,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `3b7f1c7` | 修复鸿蒙 `KeyboardStickyView` 的 `onKeyboardMoveStart` 延迟：Harmony 在 start 阶段刷新 Reanimated shared values，保持原本瞬时切换但不等到 end。 |
 | `c2a9838` | 同步上游 `9011a90a78` + `0071eb058d`：`KeyboardAwareScrollView enabled=false` 不再挂载底部 Reanimated padding view，并新增 `findNodeHandle` 平台封装。 |
 | `17d373c` | 同步上游 `c5c00778f2` + `e431917472`，并提前同步 `852fa4a223`：`KeyboardAwareScrollView` 支持动态 `bottomOffset` 且避免过度滚动；`KeyboardAvoidingView behavior="height"` 避免写入 0/负高度。 |
+| `0b03f32` | 已回退：曾尝试把上游 `331293a9cc` 扩展为 Harmony window keyboard listener 生命周期修复；测试发现会导致键盘事件异常，最终判断 Harmony 无 Android 同类问题，不同步该代码。 |
 
 ## Commit 台账
 
@@ -89,7 +90,29 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | 30 | `c5c00778f2` | 2025-05-23 | ``fix: support dynamic `bottomOffset` for KeyboardAwareScrollView (#952)`` | 已分析 | 代码仓已推送 | KeyboardAwareScrollView 动态 `bottomOffset` | 已同步测试工程并验证动态 offset 正常；已回写代码仓 `src/components/KeyboardAwareScrollView/index.tsx`，本仓提交 `17d373c` 推送到 `origin/ups`。同步 `useEffect` + `runOnUI` 触发 `bottomOffset` 变化后的重新滚动计算，并结合提前同步的 `852fa4a223` 使用 `performScrollWithPositionRestoration(scrollBeforeKeyboardMovement.value)` 防止二次叠加。 | 功能效果：键盘已打开、焦点输入框仍在当前 ScrollView 内时，业务动态改变 `bottomOffset` 后会立即重新计算滚动距离；从 `50` 切到 `0` 不再继续向上过度滚动。纯 JS/Reanimated 行为修复，无原生侧修改。 | 已在测试工程验证动态 offset 正常。 |
 | 31 | `427374fcb7` | 2025-05-25 | `fix: wrong useWindowDimensions on iPad (#957)` | 已分析 | 未同步 | `useWindowDimensions` 原生 resize 事件链路审计 | 无测试工程代码修改。上游删除 `index.android.ts`，让所有平台统一在 `index.ts` 订阅 `WindowDimensionsEvents.addListener("windowDidResize")`；iOS 原生在 `KeyboardControllerView.layoutSubviews` 中读取 `UIScreen.main.bounds.size`，尺寸变化时发射 `KeyboardController::windowDidResize`，并把该事件加入 iOS supported events。 | 上游问题语义是 `be7ef24f76` 的 RN `Dimensions` screen 监听仍不能覆盖 iPad 场景，于是改为由原生 `KeyboardControllerView` layout 变化发 `windowDidResize`。Harmony 当前 `Type.ts` / `supportListeners()` 白名单没有 `KeyboardController::windowDidResize`，ETS/C++ 也未发现该事件发射路径；直接同步 JS 会订阅一个收不到的事件，可能让尺寸 hook 初始值停留在 `Dimensions.get("screen")` 且后续不更新。暂不同步，需单独设计 Harmony window resize 事件后再处理。 | 暂不测试。后续若实现，应验证旋转、分屏/折叠、页面尺寸变化时 KAV/KASV/OverKeyboardView 尺寸同步。 |
 | 32 | `e431917472` | 2025-05-26 | ``fix: `KeyboardAvoidingView` incorrect layout (#954)`` | 已分析 | 代码仓已推送 | KeyboardAvoidingView `height` 行为防 0 高度 | 已同步测试工程并回写代码仓 `src/components/KeyboardAvoidingView/index.tsx`，本仓提交 `17d373c` 推送到 `origin/ups`。在 KAV animated style 中先计算 `const height = frame.value.height - bottomHeight`，`behavior="height"` 时只有 `!keyboard.isClosed.value && height > 0` 才返回 `{ height, flex: 0 }`。 | 功能效果：避免 KAV 在键盘打开或 layout 边界情况下返回 `height: 0` / 负数；上游说明 RN 对 `{height:0}` 再切回 `{}` 时样式不会正确恢复，导致布局错误。纯 JS/Reanimated 行为修复，无原生侧修改。 | 已在测试工程验证无明显问题；极端小容器 guard 场景内容不显示属于测试场景压缩效果，重点是关闭后不永久塌陷。 |
-| 33 | `331293a9cc` | 2025-06-09 | `fix: 2 memory leaks (#966)` | 已分析 | 代码仓已推送 | Harmony keyboard listener 生命周期释放 | Android 原提交修复 `ModalAttachedWatcher` 和 `WindowDimensionListener` 未 detach 的内存泄漏。Harmony 无同名 Android 类，但存在同类生命周期风险：`RNKeyboardControllerTurboModule` 的 `keyboardHeightChange` 原先 on/off 使用不同匿名函数，`keyboardWillShow/Hide` 依赖按事件名全量 off，`cleanUpCallbacks` 收集后未在 TurboModule 销毁时执行；本次改为稳定 handler 引用、增加注册状态、补 `__onDestroy__()` 释放 window listener / cppEventEmitter 订阅并恢复 `KeyboardAvoidMode`。同时 `KeyboardControllerViewComponentInstance` 增加析构关闭 observer、清 focused input area observer、取消键盘动画任务。 | 功能效果：反复 reload、页面卸载/重挂、`KeyboardControllerView` 开关后，不应残留旧 window 键盘监听，也不应继续向旧实例发送键盘事件。具体代码不同于 Android，但修复目标同属 native/window 监听生命周期释放。SDK 类型确认 `keyboardHeightChange`、`keyboardWillShow`、`keyboardWillHide` 的 `off(type, callback?)` 支持 callback 参数。 | 已同步测试工程，用户确认可按该等价修复提交；后续建议回归 reload、多次进入退出 demo、快速打开/关闭键盘是否无重复事件和崩溃。 |
+| 33 | `331293a9cc` | 2025-06-09 | `fix: 2 memory leaks (#966)` | 已分析-不需同步 | 未同步（已回退 `0b03f32`） | Android memory leak 审计 | 无代码修改。Android 原提交修复 `ModalAttachedWatcher` 和 `WindowDimensionListener` 未 detach 的内存泄漏。Harmony 没有这两个 Android 类，也没有 `ReactApplicationContext` + Android view attach watcher / window dimension listener 的同名持有链路。此前按“同类生命周期风险”尝试把 Harmony `keyboardHeightChange` / `keyboardWillShow` / `keyboardWillHide` 改为稳定 handler、补 TurboModule `__onDestroy__` 和 C++ view 析构清理，但测试发现会导致多类键盘事件异常，说明该改动扩大了原 commit 范围并破坏了 Harmony 当前事件注册/分发时序。 | 最终判断：鸿蒙当前不存在上游 `331293a9cc` 修复的 Android 同类问题，不按该 commit 修改。`0b03f32` 的代码改动已从主仓和测试工程回退；后续若单独发现 Harmony listener 泄漏，需要基于实际日志/复现另开专项修复，不能挂在此 Android commit 下。 | 已在测试工程回退验证方向；由用户反馈“很多事件都不正常”触发撤回。 |
+
+## 第 30-37 / 155 平台专用补充审计
+
+> 这一段补齐主线第 30-37 笔源码 commit 的实际分析结果，避免把 Android-only / iOS-only 简单当作跳过依据。完整状态仍以 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 为准。
+
+| 源码顺序 | 上游 commit | 结论 | Harmony 等价风险分析 / 处理方案 |
+| ---: | --- | --- | --- |
+| 30 | `76226df4d9` | 已分析-不需同步 | Android 修 `OverKeyboardView` accessibility 崩溃：overlay children 位于 `WindowManager.addView` 的独立 window，却被 host 暴露给无障碍树，TalkBack descendant 校验失败。Harmony 包注册表 `keyboardControllerPackage.cpp/.h` 只有 `RNKeyboardControllerView` / `RNKeyboardGestureArea`，当前没有 `RNKCOverKeyboardView`、overlay host 或 accessibility children 转发链路；不改代码。未来实现 `OverKeyboardView` 时必须覆盖无障碍遍历。 |
+| 31 | `49898cd5eb` | 已分析-不需同步 | 上游只改 iOS GitHub Actions Xcode 版本和 Xcode baseline plist，不触达库运行时代码、JS API、原生组件或 Harmony 构建链；确认后不改代码。 |
+| 32 | `98df8d88e2` | 已分析-不需同步 | iOS 修 `KeyboardGestureArea` 通过 `inputAccessoryView` 扩展键盘时，输入框切换中延迟 `resignFirstResponder` 误关闭新键盘的问题。Harmony `KeyboardGestureAreaComponentInstance.cpp` 走 ArkUI touch，调用 ETS `dismiss/show`，无 UIKit responder/inputAccessoryView 链路；当前不改代码，保留快速切换输入框 + KGA offset 回归项。 |
+| 33 | `331293a9cc` | 已分析-不需同步 | Android 修 native/window listener 泄漏；Harmony 无 `ModalAttachedWatcher` / `WindowDimensionListener` 同名链路。此前 `0b03f32` 按同类风险扩展修复后导致键盘事件异常，已回退；本 commit 最终不修改 Harmony 代码。 |
+| 34 | `371cf7baef` | 已分析-不需同步 | iOS 26 键盘 view class prefix 变化导致 `KeyboardView.find()` 找不到 host，`onMove` 不触发。Harmony 事件来自 `RNKeyboardControllerTurboModule.ts` 的 `keyboardHeightChange` / `keyboardWillShow/Hide` / `getWindowAvoidArea(TYPE_KEYBOARD)`，再由 `KeyboardControllerViewComponentInstance.cpp` 合成 move 事件，不遍历 UIKit view hierarchy；不改代码。 |
+| 35 | `fb95fc1364` | 已分析-不需同步 | JS 只为 `Platform.OS === "ios" && Platform.Version >= 26` 增加 Toolbar floating 样式和 `OPENED_OFFSET=-11`。Harmony 不进入 iOS 26 条件分支，且 Toolbar 已验证正常；当前不为 iOS 临时视觉策略改 Harmony。 |
+| 36 | `9de91159df` | 已分析-不需同步 | iOS 把 `CADisplayLink` 从反复创建/销毁改为常驻 pause/resume。Harmony 没有 Swift/CADisplayLink，当前 C++ 只在键盘高度变化后通过 `taskExecutor->runDelayedTask` 合成有限帧，且 `startKeyboardAnimation()` 与析构会取消旧任务；无需同步。 |
+| 37 | `c8398fc0e3` | 已分析-不需同步 | Android 清理 ViewManager 构造函数里的未使用 `ReactApplicationContext`。Harmony 通过 RNOH `Package::Context` / `ComponentInstance::Context` 创建 TurboModule 和组件，没有 Java/Kotlin ViewManager 长期持有 application context 的路径；不改代码。 |
+
+## 第 38-39 / 155 新组件能力审计
+
+| 源码顺序 | 上游 commit | 结论 | Harmony API 证据 / 处理方案 |
+| ---: | --- | --- | --- |
+| 38 | `a57fa4b427` | 已分析-待测试 | `KeyboardBackgroundView` 是视觉组件：iOS 通过私有 `UIKBBackdropView` 匹配键盘材质，Android 通过当前 IME package、系统深浅色和 hardcoded skin 表推断背景色。Harmony 普通应用侧可用 `inputMethod.getCurrentInputMethod()` 获取当前输入法属性；ArkUI `TextInput.keyboardAppearance()` 可请求键盘样式，但文档说明“需要输入法适配后生效”；`window.getWindowAvoidArea(TYPE_KEYBOARD)` 只返回固定态软键盘区域。未找到读取当前系统键盘背景色/材质或复用键盘 backdrop 的公开 API。因此 Harmony 只能实现视觉近似 fallback：按 colorMode / keyboardAppearance / 输入法包名推断背景色，不能承诺匹配第三方键盘、动态壁纸主题或输入法自定义皮肤。建议进入测试工程验证近似效果。 |
+| 39 | `347fef35c0` | 因系统能力缺失不能完全做 | `KeyboardExtender` 的 iOS 真能力依赖 `UIInputView(inputViewStyle: keyboard)` + `inputAccessoryView`，让业务子树成为键盘的一部分并增加键盘高度；Android 上游自己也只能用 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill。Harmony 证据：IME Kit `inputMethodEngine.getInputMethodAbility()` 文档明确“仅支持输入法应用调用”，`createPanel()` / `Panel.show()` 是输入法应用面板 API；普通应用的 `inputMethod.getController()` 只能控制/绑定输入法、显示隐藏键盘等；ArkUI `TextInput.customKeyboard()` 会替换系统输入法，不是扩展系统键盘；`WindowStage.createSubWindow*` 只创建应用子窗口，不能挂入输入法窗口层级。处理方案：不新增 Harmony native `KeyboardExtender` 空实现；若接受 Android 同级别降级，可同步 JS polyfill，效果是“在键盘上方跟随显示并模拟背景”，不是系统级 keyboard accessory。 |
 
 ## 补充审计规则：平台 only 不能直接跳过
 
@@ -109,8 +132,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | --- | --- | --- | --- | --- | --- |
 | `59dddfee31` | 2025-04-21 | iOS-only | `fix: App Store compatible icons (#926)` | 已确认仅为 iOS example/App Store 图标资产，Harmony 库功能无影响。 | 已分析-不需同步 |
 | `661b39e24c` | 2025-05-16 | 触达 JS/TS | `docs: better JSDoc (#942)` | 已确认触达 JSDoc、lint 和类型组织；本轮按要求不进行同步，后续若同步类型结构需单独批次处理。 | 已分析-不需同步 |
-| `49898cd5eb` | 2025-06-03 | iOS-only | `ci: use newer XCode (#964)` | 查是否纯 CI；若包含 iOS 构建兼容经验，确认 Harmony 构建无同类配置问题。 | 待补充审计 |
-| `9de91159df` | 2025-06-13 | iOS-only | `perf: pause CADisplayLink instead of re-creation (#980)` | 查键盘逐帧观察器生命周期；Harmony 合成帧任务是否也有暂停/重建开销或泄漏风险。 | 待补充审计 |
+| `49898cd5eb` | 2025-06-03 | iOS-only | `ci: use newer XCode (#964)` | 已确认只改 iOS CI/Xcode baseline 文件，不触达库运行时代码或 Harmony 构建链。 | 已分析-不需同步 |
+| `9de91159df` | 2025-06-13 | iOS-only | `perf: pause CADisplayLink instead of re-creation (#980)` | 已确认上游是 iOS `CADisplayLink` pause/resume 优化；Harmony 使用有限 `runDelayedTask` 合成帧且已在析构取消任务，无同类持久 display link 链路。 | 已分析-不需同步 |
 | `f963befc1a` | 2025-07-12 | iOS-only | `fix: KeyboardExtender on iOS 26 (#1015)` | 查 KeyboardExtender 平台容器/键盘跟随语义；Harmony 实现该组件时需核对同类窗口层级问题。 | 待补充审计 |
 | `8cca8df8a3` | 2025-07-19 | iOS-only | `feat: update swiftformat (#1028)` | 查是否纯格式工具；一般不影响 Harmony，但需确认无源码语义改动。 | 待补充审计 |
 | `65586f9726` | 2025-07-22 | iOS-only | `fix: KeyboardBackgroundView build on fabric (#1034)` | 查 Fabric 构建/组件注册语义；Harmony 新增 BackgroundView 时需确认 codegen/native view 注册。 | 待补充审计 |
@@ -195,7 +218,9 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 按要求不进行同步 `c8a08ce2b8`、`59dddfee31`、`661b39e24c`；已补充不需同步原因并推进总清单到 `24 / 155`。
 - 已分析 `be7ef24f76`、`ba2e187a6c`、`c5c00778f2`、`427374fcb7`、`e431917472`：尺寸 hook 链路暂不同步；Android ShadowNode 同步当前不需同步；`c5c00778f2`、`e431917472` 进入测试工程同步候选。
 - 已验证并推送 `c5c00778f2`、`e431917472`；因动态 `bottomOffset` 测试复现 over-scrolling，提前同步并验证 `852fa4a223`，本仓提交 `17d373c`。
+- 已补充审计第 `30-37 / 155` 笔：`76226df4d9`、`49898cd5eb`、`98df8d88e2`、`331293a9cc`、`371cf7baef`、`fb95fc1364`、`9de91159df`、`c8398fc0e3` 经 Harmony 对应链路分析后当前不需同步；其中 `331293a9cc` 曾按同类风险提交 `0b03f32`，测试发现事件异常后已回退，最终记录为 Harmony 无同类问题。
+- 已仔细分析第 `38-39 / 155` 笔：`KeyboardBackgroundView` 无精确键盘背景 API，但可做视觉近似 fallback，建议进测试工程；`KeyboardExtender` 无普通应用可用的原生 accessory/panel API，只能按 Android 同级别 JS polyfill 降级，不能完整实现 iOS 原生语义。
 
 ## 下一步
 
-当前待测试候选已清空。下一批仍从主线时间顺序第 `30 / 155` 笔 `76226df4d9` 开始审计；第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选：第 `38 / 155` 笔 `a57fa4b427` 的 Harmony 视觉近似版 `KeyboardBackgroundView`。第 `39 / 155` 笔 `347fef35c0` 需要用户确认是否接受 Android 同级别 polyfill 语义；下一笔主线源码审计是第 `40 / 155` 笔 `60ec0ceab8`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。

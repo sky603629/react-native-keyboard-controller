@@ -78,45 +78,6 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
   // 键盘动画时长缓存: will 回调取 KeyboardInfo.config.duration 并缓存, did 读缓存
   private readonly defaultKeyboardAnimationDuration: number = 250;
   private currentKeyboardAnimationDuration: number = this.defaultKeyboardAnimationDuration;
-  private keyboardHeightChangeListenerRegistered: boolean = false;
-  private readonly keyboardHeightChangeHandler = (_data: number) => {
-    if (!this.enabled || !this.currentWindow) {
-      return;
-    }
-    const keyboardAvoidArea = this.currentWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
-    let height = Math.ceil(px2vp(keyboardAvoidArea.height))
-    if(this.keyboardHeight == height ){
-      return
-    }
-    if (height > 0) {
-      this.keyboardStatus = KeyboardStatusType.SHOW;
-    } else {
-      this.keyboardStatus = KeyboardStatusType.HIDE;
-    }
-    this.keyboardHeight = height;
-    this.keyboardControllerEventHandle(this.keyboardStatus, height);
-    this.ctx.rnInstance.postMessageToCpp('keyboardHeightChange', height);
-  };
-  private readonly keyboardWillShowHandler = (info: window.KeyboardInfo) => {
-    Logger.info('###turboModule native keyboardWillShow, KeyboardInfo=' + JSON.stringify(info));
-    if (!this.enabled) {
-      return;
-    }
-    // 取真实动画时长并缓存, 供后续 did 事件使用(对齐 iOS/Android payload.duration)
-    const d = this.getKeyboardDurationFromKeyboardInfo(info);
-    this.currentKeyboardAnimationDuration = d;
-    // will 的 height 用避让区高度兜底, 与 did 同源(对齐 iOS will/did 同值结论)
-    this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, this.getKeyboardHeightForWill(info), d);
-  };
-  private readonly keyboardWillHideHandler = (info: window.KeyboardInfo) => {
-    Logger.info('###turboModule native keyboardWillHide, KeyboardInfo=' + JSON.stringify(info));
-    if (!this.enabled) {
-      return;
-    }
-    const d = this.getKeyboardDurationFromKeyboardInfo(info);
-    this.currentKeyboardAnimationDuration = d;
-    this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0, d);
-  };
   constructor(ctx) {
     super(ctx);
     this.context = this.ctx.uiAbilityContext;
@@ -300,43 +261,41 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
         Logger.info("###turboModule Close KeyboardObserver");
         // 先关闭原生 will 监听(若有), 再关 keyboardHeightChange
         this.offNativeWillListeners();
-        this.unregisterKeyboardHeightChangeListener();
+        this.currentWindow.off('keyboardHeightChange', (data) => {
+          this.keyboardStatus = KeyboardStatusType.HIDE;
+          this.keyboardHeight = 0;
+          Logger.info('### close keyboardHeightChange observer');
+        });
       } catch (exception) {
         Logger.error('### Failed to close the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
       }
     }else{
-      this.registerKeyboardHeightChangeListener();
+      try {
+        this.currentWindow.on('keyboardHeightChange', (data) => {
+          const keyboardAvoidArea = this.currentWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
+          let height = Math.ceil(px2vp(keyboardAvoidArea.height))
+          if(open){
+            if(this.keyboardHeight == height ){
+              return
+            }
+            if (height > 0) {
+              this.keyboardStatus = KeyboardStatusType.SHOW;
+            } else {
+              this.keyboardStatus = KeyboardStatusType.HIDE;
+            }
+            this.keyboardHeight = height;
+            this.keyboardControllerEventHandle(this.keyboardStatus, height);
+            this.ctx.rnInstance.postMessageToCpp('keyboardHeightChange', height);
+          }
+
+        });
+      } catch (exception) {
+        Logger.error('Failed to enable the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
+      }
       // API20+: 注册原生 keyboardWillShow/keyboardWillHide, 获得真正的"即将"语义
       this.onNativeWillListeners();
     }
 
-  }
-
-  private registerKeyboardHeightChangeListener() {
-    if (!this.currentWindow || this.keyboardHeightChangeListenerRegistered) {
-      return;
-    }
-    try {
-      this.currentWindow.on('keyboardHeightChange', this.keyboardHeightChangeHandler);
-      this.keyboardHeightChangeListenerRegistered = true;
-    } catch (exception) {
-      Logger.error('Failed to enable the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
-    }
-  }
-
-  private unregisterKeyboardHeightChangeListener() {
-    if (!this.currentWindow || !this.keyboardHeightChangeListenerRegistered) {
-      return;
-    }
-    try {
-      this.currentWindow.off('keyboardHeightChange', this.keyboardHeightChangeHandler);
-      this.keyboardStatus = KeyboardStatusType.HIDE;
-      this.keyboardHeight = 0;
-      Logger.info('### close keyboardHeightChange observer');
-    } catch (exception) {
-      Logger.error('### Failed to close the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
-    }
-    this.keyboardHeightChangeListenerRegistered = false;
   }
 
   /**
@@ -352,8 +311,26 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       return;
     }
     try {
-      this.currentWindow.on('keyboardWillShow', this.keyboardWillShowHandler);
-      this.currentWindow.on('keyboardWillHide', this.keyboardWillHideHandler);
+      this.currentWindow.on('keyboardWillShow', (info: window.KeyboardInfo) => {
+        Logger.info('###turboModule native keyboardWillShow, KeyboardInfo=' + JSON.stringify(info));
+        if (!this.enabled) {
+          return;
+        }
+        // 取真实动画时长并缓存, 供后续 did 事件使用(对齐 iOS/Android payload.duration)
+        const d = this.getKeyboardDurationFromKeyboardInfo(info);
+        this.currentKeyboardAnimationDuration = d;
+        // will 的 height 用避让区高度兜底, 与 did 同源(对齐 iOS will/did 同值结论)
+        this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, this.getKeyboardHeightForWill(info), d);
+      });
+      this.currentWindow.on('keyboardWillHide', (info: window.KeyboardInfo) => {
+        Logger.info('###turboModule native keyboardWillHide, KeyboardInfo=' + JSON.stringify(info));
+        if (!this.enabled) {
+          return;
+        }
+        const d = this.getKeyboardDurationFromKeyboardInfo(info);
+        this.currentKeyboardAnimationDuration = d;
+        this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0, d);
+      });
       this.nativeWillListenersRegistered = true;
       Logger.info('###turboModule native keyboardWillShow/Hide registered (API' + deviceInfo.sdkApiVersion + ')');
     } catch (e) {
@@ -369,8 +346,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       return;
     }
     try {
-      this.currentWindow.off('keyboardWillShow', this.keyboardWillShowHandler);
-      this.currentWindow.off('keyboardWillHide', this.keyboardWillHideHandler);
+      this.currentWindow.off('keyboardWillShow');
+      this.currentWindow.off('keyboardWillHide');
     } catch (e) {
       Logger.error('### off native keyboardWillShow/Hide failed: ' + JSON.stringify(e));
     }
@@ -429,22 +406,6 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     } catch (exception) {
       Logger.error('Failed to update KeyboardAvoidMode. Cause: ' + JSON.stringify(exception));
     }
-  }
-
-  __onDestroy__(): void {
-    super.__onDestroy__();
-    this.enabled = false;
-    this.offNativeWillListeners();
-    this.unregisterKeyboardHeightChangeListener();
-    this.setKeyboardAvoidModeEnabled(false);
-    this.cleanUpCallbacks.forEach((callback) => {
-      try {
-        callback();
-      } catch (exception) {
-        Logger.error('Failed to cleanup KeyboardController callback. Cause: ' + JSON.stringify(exception));
-      }
-    });
-    this.cleanUpCallbacks = [];
   }
 
   private getKeyboardAppearance(): String {
