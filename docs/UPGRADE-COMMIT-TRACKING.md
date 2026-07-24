@@ -239,8 +239,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已分析第 `46 / 155` 笔 iOS 26 `KeyboardExtender` 视觉修复：依赖 UIKit `UIInputView`/`inputAccessoryView`/`UIGlassEffect`，Harmony 当前走 Android 同级 polyfill，无同类原生链路，不同步。
 - 已同步并推送第 `47-48 / 155` 笔 `preload`：JS 增加 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生采用 Android 同策略 no-op，避免真实调用 `showSoftKeyboard()` 拉起键盘。测试确认 `preload()` 调用和默认 `KeyboardProvider` 挂载不会自动弹键盘，事件无异常。
 - 已分析第 `49 / 155` 笔 iOS `swiftformat`，纯 Swift 格式化，Harmony 不同步。
-- 已分析第 `50 / 155` 笔 KASV full screen input support：继续把 KASV 滚动核心改为 caret 坐标语义，适合下一批单独同步测试，重点覆盖大高度/全屏 TextInput、顶部遮挡、粘贴、多行增长和动态 `bottomOffset`。
+- 已在测试工程同步第 `50 / 155` 笔 KASV full screen input support：继续把 KASV 滚动核心改为 caret 坐标语义；Harmony 已具备 `selection.end.y`，本轮仅同步 JS，待验证大高度/全屏 TextInput、顶部遮挡、粘贴、多行增长和动态 `bottomOffset`。
 
 ## 下一步
 
-当前待测试候选：第 `50 / 155` 笔 `a28dbec565` 建议下一批单独同步。下一笔主线源码审计是第 `51 / 155` 笔 `e6679bde41`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选：第 `50 / 155` 笔 `a28dbec565` 已同步测试工程。下一笔主线源码审计是第 `51 / 155` 笔 `e6679bde41`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。

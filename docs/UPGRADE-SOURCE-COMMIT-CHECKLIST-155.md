@@ -32,8 +32,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 已按顺序处理到 | 50 |
 | 当前进度 | 32.3% |
 | 已代码同步并推送 | 23 |
-| 已分析-待测试 | 1 |
-| 测试工程已同步 | 0 |
+| 已分析-待测试 | 0 |
+| 测试工程已同步 | 1 |
 | 已分析-不需同步 | 23 |
 | 已分析-暂不同步 | 3 |
 | 因系统能力缺失不能完全做 | 0 |
@@ -111,7 +111,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 47 | `49979932c7` | 2025-07-13 | JS/TS+Android+iOS | feat: preload (#1016) | 代码仓已推送 | 上游新增 `KeyboardController.preload()`。iOS 通过隐藏 `UITextField` `becomeFirstResponder/resignFirstResponder` 预热键盘 UI，并在预热中忽略键盘事件；Android 明确做 no-op。Harmony 证据：系统 IME 独立于应用进程，普通业务应用没有 iOS 同类 app 内键盘 UI 预热机制；尝试 `showSoftKeyboard()` 会真实拉起键盘并产生事件，不能作为 preload。已同步 JS API/spec/types，并把 Harmony ETS `preload()` 实现为 no-op 日志；测试确认调用 `preload()` 不报错且不弹键盘。 |
 | 48 | `1c03e7b9cf` | 2025-07-15 | JS/TS | feat: preload by default (#1018) | 代码仓已推送 | 上游给 `KeyboardProvider` 新增 `preload?: boolean`，默认 `true`，挂载时调用 `KeyboardController.preload()`，可通过 `preload={false}` 关闭。Harmony 因第 47 笔采用 no-op，默认调用不会产生键盘显示或事件副作用；已同步 `animated.tsx` 的 prop/effect，测试确认进入 `KeyboardProvider` 页面不会自动弹键盘且事件无异常。 |
 | 49 | `8cca8df8a3` | 2025-07-19 | iOS | feat: update `swiftformat` (#1028) | 已分析-不需同步 | 上游只格式化 iOS Swift 文件 `KCTextInputCompositeDelegate.swift`、`KeyboardAreaExtender.swift`，没有 JS/Android/Harmony 行为变化。Harmony 无 Swift 文件，不同步。 |
-| 50 | `a28dbec565` | 2025-07-20 | JS/TS | feat: `KeyboardAwareScrollView` full screen input support (#1026) | 已分析-待测试 | 上游继续重构 KASV：`bottomOffset` 语义从“键盘到输入框”改为“键盘到 focused TextInput 内 caret”，新增 `updateLayoutFromSelection()`，焦点切换、文本增长、粘贴和 layout 高度变化都尽量用 `lastSelection.selection.end.y` 更新临时 layout，并修正输入框同时被键盘和顶部区域覆盖的大输入框场景。Harmony 已具备 selection y 事件，理论可同步 JS；但这是 KASV 大改且紧接第 45 笔，建议单独放下一批测试，重点覆盖全屏/大高度 TextInput、顶部遮挡、粘贴、多行增长和动态 bottomOffset。 |
+| 50 | `a28dbec565` | 2025-07-20 | JS/TS | feat: `KeyboardAwareScrollView` full screen input support (#1026) | 测试工程已同步 | 上游继续重构 KASV：`bottomOffset` 语义从“键盘到输入框”改为“键盘到 focused TextInput 内 caret”，新增 `updateLayoutFromSelection()`，焦点切换、文本增长、粘贴和 layout 高度变化都尽量用 `lastSelection.selection.end.y` 更新临时 layout，并修正输入框同时被键盘和顶部区域覆盖的大输入框场景。Harmony 已具备 selection y 事件，不需要新增原生 API；已同步测试工程 JS，待验证全屏/大高度 TextInput、顶部遮挡、粘贴、多行增长和动态 bottomOffset。 |
 | 51 | `e6679bde41` | 2025-07-21 | iOS | fix: delay delegate substitution (#1027) | 未分析 | |
 | 52 | `65586f9726` | 2025-07-22 | iOS | fix: `KeyboardBackgroundView` build on fabric (#1034) | 未分析 | |
 | 53 | `d6b93dc2d8` | 2025-07-23 | Android | fix: re-setup `WindowDimensionsListener`after JS bundle reload (#1036) | 未分析 | |
