@@ -17,6 +17,11 @@ import type { KeyboardStickyViewProps } from "../KeyboardStickyView";
 import type { ReactNode } from "react";
 import type { ViewProps } from "react-native";
 
+type SafeAreaInsets = {
+  left: number;
+  right: number;
+};
+
 export type KeyboardToolbarProps = Omit<
   ViewProps,
   "style" | "testID" | "children"
@@ -56,6 +61,7 @@ export type KeyboardToolbarProps = Omit<
    * A value for container opacity in hexadecimal format (e.g. `ff`). Default value is `ff`.
    */
   opacity?: HEX;
+  insets?: SafeAreaInsets;
 } & Pick<KeyboardStickyViewProps, "offset" | "enabled">;
 
 const TEST_ID_KEYBOARD_TOOLBAR = "keyboard.toolbar";
@@ -78,7 +84,7 @@ const goToPrevField = () => KeyboardControllerNative.setFocusTo("prev");
 const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
   content,
   theme = colors,
-  doneText,
+  doneText = "Done",
   button,
   icon,
   showArrows = true,
@@ -89,6 +95,7 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
   opacity = DEFAULT_OPACITY,
   offset: { closed = 0, opened = 0 } = {},
   enabled = true,
+  insets,
   ...rest
 }) => {
   const colorScheme = useColorScheme();
@@ -116,8 +123,12 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
       {
         backgroundColor: `${theme[colorScheme].background}${opacity}`,
       },
+      {
+        paddingLeft: insets?.left,
+        paddingRight: insets?.right,
+      },
     ],
-    [colorScheme, opacity, theme],
+    [colorScheme, opacity, theme, insets],
   );
   const offset = useMemo(
     () => ({ closed: closed + KEYBOARD_TOOLBAR_HEIGHT, opened }),
@@ -144,7 +155,7 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
       <View {...rest} style={toolbarStyle} testID={TEST_ID_KEYBOARD_TOOLBAR}>
         {blur}
         {showArrows && (
-          <>
+          <View style={styles.arrows}>
             <ButtonContainer
               accessibilityLabel="Previous"
               accessibilityHint="Will move focus to previous field"
@@ -173,25 +184,27 @@ const KeyboardToolbar: React.FC<KeyboardToolbarProps> = ({
                 theme={theme}
               />
             </ButtonContainer>
-          </>
+          </View>
         )}
 
         <View style={styles.flex} testID={TEST_ID_KEYBOARD_TOOLBAR_CONTENT}>
           {content}
         </View>
-        <ButtonContainer
-          accessibilityLabel="Done"
-          accessibilityHint="Will close the keyboard"
-          onPress={onPressDone}
-          testID={TEST_ID_KEYBOARD_TOOLBAR_DONE}
-          rippleRadius={28}
-          style={styles.doneButtonContainer}
-          theme={theme}
-        >
-          <Text style={doneStyle} maxFontSizeMultiplier={1.3}>
-            {doneText || "Done"}
-          </Text>
-        </ButtonContainer>
+        {doneText && (
+          <ButtonContainer
+            accessibilityLabel="Done"
+            accessibilityHint="Will close the keyboard"
+            onPress={onPressDone}
+            testID={TEST_ID_KEYBOARD_TOOLBAR_DONE}
+            rippleRadius={28}
+            style={styles.doneButtonContainer}
+            theme={theme}
+          >
+            <Text style={doneStyle} maxFontSizeMultiplier={1.3}>
+              {doneText}
+            </Text>
+          </ButtonContainer>
+        )}
       </View>
     </KeyboardStickyView>
   );
@@ -208,14 +221,18 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     height: KEYBOARD_TOOLBAR_HEIGHT,
-    paddingHorizontal: 8,
+  },
+  arrows: {
+    flexDirection: "row",
+    paddingLeft: 8,
   },
   doneButton: {
     fontWeight: "600",
     fontSize: 15,
   },
   doneButtonContainer: {
-    marginRight: 8,
+    marginRight: 16,
+    marginLeft: 8,
   },
 });
 
