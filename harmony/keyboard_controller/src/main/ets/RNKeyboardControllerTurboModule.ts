@@ -50,7 +50,7 @@ interface RNKeyboardControllerSpec {
 
   preload(): void;
 
-  dismiss(keepFocus: boolean): void;
+  dismiss(keepFocus: boolean, animated: boolean): void;
 
   setFocusTo(direction: string): void;
 
@@ -127,7 +127,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     Logger.info('harmonyOS not support preload')
   }
 
-  dismiss(keepFocus: boolean): void {
+  dismiss(keepFocus: boolean, animated: boolean): void {
     let inputMethodController = inputMethod.getController();
     inputMethodController.stopInputSession()
 

@@ -126,6 +126,7 @@ export type KeyboardExtenderProps = PropsWithChildren<{
 export type Direction = "next" | "prev" | "current";
 export type DismissOptions = {
   keepFocus: boolean;
+  animated: boolean;
 };
 export type KeyboardControllerModule = {
   // android only
@@ -134,7 +135,7 @@ export type KeyboardControllerModule = {
   // ios only
   preload: () => void;
   // all platforms
-  dismiss: (options?: DismissOptions) => Promise<void>;
+  dismiss: (options?: Partial<DismissOptions>) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
   state: () => KeyboardEventData;
@@ -148,7 +149,7 @@ export type KeyboardControllerNativeModule = {
   // ios only
   preload: () => void;
   // all platforms
-  dismiss: (keepFocus: boolean) => void;
+  dismiss: (keepFocus: boolean, animated: boolean) => void;
   setFocusTo: (direction: Direction) => void;
   // native event module stuff
   addListener: (eventName: string) => void;
