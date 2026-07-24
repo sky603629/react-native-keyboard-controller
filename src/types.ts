@@ -135,6 +135,11 @@ export type KeyboardControllerModule = {
   // ios only
   preload: () => void;
   // all platforms
+  /**
+   * Dismisses the active keyboard. Removes focus by default, but allows passing
+   * `{ keepFocus: true }` to keep focus. Pass `{ animated: false }` to request
+   * immediate keyboard dismissal when the platform supports it.
+   */
   dismiss: (options?: Partial<DismissOptions>) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
@@ -170,7 +175,7 @@ export type KeyboardEventData = {
   type: NonNullable<TextInputProps["keyboardType"]>;
   appearance: NonNullable<TextInputProps["keyboardAppearance"]>;
 };
-export type KeyboardState = {
+export type IKeyboardState = {
   isVisible: boolean;
 } & KeyboardEventData;
 export type KeyboardEventsModule = {

@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已处理到第 `90 / 155` 笔 `1441ae3b59`，下一笔是第 `91 / 155` 笔 `852fa4a223`；第 `91 / 155` 笔已提前同步，走到第 91 时只复核记录和回归。
+- 当前指针：已分析到第 `95 / 155` 笔 `4bdf4e5b3e`；第 `93`、`95 / 155` 笔已同步到测试工程和主仓工作区，等待用户编译验证后再提交推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；下一笔待分析是第 `96 / 155` 笔 `70784fd70f`。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -52,27 +52,28 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `90 / 155` 笔按时间顺序完成证据审计；另提前同步第 `91 / 155` 笔 `852fa4a223`：
+截至第 `95 / 155` 笔按时间顺序完成证据审计；第 `93`、`95 / 155` 笔已同步到测试工程和主仓工作区，等待用户验证后提交；第 `94 / 155` 暂不同步：
 
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 90 |
-| 当前进度 | 58.1% |
+| 已按顺序处理到 | 95 |
+| 当前进度 | 61.3% |
 | 已代码同步并推送 | 27 |
 | 已分析-待测试 | 0 |
-| 测试工程已同步 | 0 |
-| 已分析-不需同步 | 59 |
-| 已分析-暂不同步 | 4 |
+| 测试工程已同步 | 2 |
+| 已分析-不需同步 | 60 |
+| 已分析-暂不同步 | 5 |
 | 因系统能力缺失不能完全做 | 1 |
-| 未分析 | 64 |
+| 未分析 | 59 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`90` / `155`，`1441ae3b59`
-- 下一笔待处理：`91` / `155`，`852fa4a223`（已提前同步，只需复核）
+- 最后一笔已分析：`95` / `155`，`4bdf4e5b3e`
+- 下一笔待处理：`96` / `155`，`70784fd70f`
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
+- 当前待验证：`93`、`95` / `155`，已同步到 `E:\Devsoftware\25p5` 测试工程并补 demo；用户验证通过后再提交推送主仓。第 `94 / 155` 不纳入本批同步。
 
 ## 状态说明
 
@@ -180,11 +181,11 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 88 | `0dcf4b4d41` | 2025-11-03 | iOS | fix: non-working release version on iOS 26 (#1184) | 已分析-不需同步 | iOS release 冷启动时 rootView 可能还不可用，上游把 `KeyboardTrackingView` attach 延后到 `UIApplication.didBecomeActiveNotification`。Harmony 键盘事件监听在 ETS `startKeyboardObserver` 中对当前 window 注册，不依赖 iOS rootView 或 app active notification 来挂 tracking view；不改代码。 |
 | 89 | `b0e60f6b32` | 2025-11-04 | iOS | fix: attaching `KeyboardTrackingView` (#1193) | 已分析-不需同步 | 上游又修第 88：dev build 可能错过 `didBecomeActive`，因此把 `KeyboardTrackingView` 公开，并在 iOS `KeyboardControllerView.didMoveToWindow` 时把 `window` 传入 `attachToTopmostView`。Harmony `KeyboardControllerViewComponentInstance` 没有 UIKit `didMoveToWindow`，当前按 ArkUI component instance 和 ETS window listener 工作；无 tracking view 可挂，不改代码。 |
 | 90 | `1441ae3b59` | 2025-11-06 | Android | fix: add `KeyboardBackgroundView` to turbo package (#1197) | 已分析-不需同步 | 上游真实 diff 只有 Android 旧架构 `android/src/turbo/.../KeyboardControllerPackage.kt` 增加 `KeyboardBackgroundViewManager()`，目的是让 RN < 0.74 的 `TurboPackage` 暴露第 38 笔已经新增的 Android native `KeyboardBackgroundViewManager`。Harmony 需要结合前序实现看：第 38 笔已在 `src/bindings(.native).ts` 选择 JS `View` fallback 模拟键盘背景，第 39 笔 `KeyboardExtender` 也采用和 Android/default 一致的 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` JS polyfill；当前 `keyboardControllerPackage.cpp` 只注册 `RNKeyboardControllerView` 和 `RNKeyboardGestureArea`，没有 Harmony native `KeyboardBackgroundView` manager/descriptor。结论是：Harmony 原本就是按 Android/default 的 JS polyfill 路线覆盖该能力，不存在需要像 Android TurboPackage 那样补注册的 native manager；不改代码，也不补空原生组件。 |
-| 91 | `852fa4a223` | 2025-11-14 | JS/TS | fix: dynamic `bottomOffset` over-scrolling (#1204) | 代码仓已推送 | 为修复 `c5c00778f2` 测试中复现的二次滚动叠加问题，已提前同步；后续到第 91 笔时只需复核。 |
-| 92 | `29ad9e8947` | 2025-11-21 | JS/TS | refactor: don't use private reanimated API (#1209) | 未分析 | |
-| 93 | `41858c78f9` | 2025-11-24 | JS/TS | feat: `useAnimatedKeyboard` compat layer (#1220) | 未分析 | |
-| 94 | `14ededa4c6` | 2025-11-25 | JS/TS+Android+iOS | feat: sync layout from JS (#1213) | 未分析 | |
-| 95 | `4bdf4e5b3e` | 2025-12-01 | JS/TS | fix: types mismatch for `dismiss` method (#1225) | 未分析 | |
+| 91 | `852fa4a223` | 2025-11-14 | JS/TS | fix: dynamic `bottomOffset` over-scrolling (#1204) | 代码仓已推送 | 已复核。上游核心是在 `KeyboardAwareScrollView` 中抽出 `performScrollWithPositionRestoration`，当动态 `bottomOffset` 变化时临时把 `scrollPosition` 回到键盘运动前基准，再调用 `maybeScroll` 后恢复，避免把已滚动距离重复叠加。当前代码仓已在早前提交 `17d373c` 同步该逻辑；测试工程 demo 已有 `bottomOffset` 调整入口。本轮不重复改代码。 |
+| 92 | `29ad9e8947` | 2025-11-21 | JS/TS | refactor: don't use private reanimated API (#1209) | 已分析-不需同步 | 上游删除 `event-handler.*` 和 `event-mappings.ts`，从直接 deep require Reanimated 私有 `registerEventHandler/unregisterEventHandler` 改为 `useEvent/useHandler` 返回的 worklet event handler。Harmony 分支当前没有 `src/event-handler.*` / `src/event-mappings.ts`，也没有 `react-native-reanimated/src/core` 深导入；现有 `src/reanimated.native.ts` 已用 `useEvent/useHandler` 包装 `onKeyboardMove*`、`onFocusedInput*` 事件，再由 `useSharedHandlers` 广播给公开 hooks。即本提交目标风险已被当前鸿蒙结构覆盖，不需要按上游重构 `internal.ts`。 |
+| 93 | `41858c78f9` | 2025-11-24 | JS/TS | feat: `useAnimatedKeyboard` compat layer (#1220) | 测试工程已同步 | 上游新增 Reanimated `useAnimatedKeyboard` 迁移兼容层，并将公开状态类型从 `KeyboardState` 改名为 `IKeyboardState`，避免与新导出的 `KeyboardState` 常量冲突。本轮已在主仓工作区和测试工程同步 `src/compat.ts`、`src/index.ts`、`src/types.ts`、`src/hooks/useKeyboardState/index.ts`：导出 `KeyboardState.UNKNOWN/OPENING/OPEN/CLOSING/CLOSED` 和 `useAnimatedKeyboard()`，其 `height/state` 由 `useKeyboardHandler` 驱动；测试工程 `Hook_useReanimatedKeyboardAnimation` demo 已增加 compat 状态文本。等待用户编译验证。 |
+| 94 | `14ededa4c6` | 2025-11-25 | JS/TS+Android+iOS | feat: sync layout from JS (#1213) | 已分析-暂不同步 | 接口不支持：`KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 当前 Harmony 不支持，因此不导出该 ref 接口，也不补 `useReanimatedFocusedInput().update()` / `KeyboardControllerViewCommands.synchronizeFocusedInputLayout` / `KeyboardController::layoutDidSynchronize` 公开链路。上游该能力不只是同步 focused input layout，还依赖当前 selection/caret 坐标：KASV 会用 `absoluteY + selection.end.y` 判断光标是否在键盘上方。Harmony 当前原生侧 selection/caret 上报不能稳定等价 Android/iOS：聚焦后不一定立即派发当前 selection，command 同步 layout 时也不会同步当前 caret；ArkUI caret offset 读取还存在拿不到或坐标语义不完整的情况。因此按“JS 尽量保持上游一致、差异收敛到原生”的原则，本轮撤销 JS/spec/context/KASV ref 适配和 demo，不同步该上游接口。后续只有在 Harmony 原生能稳定提供 focus 后和 layout sync 后的当前 selection/caret 坐标时，才能重新评估支持。 |
+| 95 | `4bdf4e5b3e` | 2025-12-01 | JS/TS | fix: types mismatch for `dismiss` method (#1225) | 测试工程已同步 | 上游只修公开类型/JSDoc：`dismiss(options)` 的 options 应为 `Partial<DismissOptions>`，因为实现已经允许只传 `{ keepFocus }` 或 `{ animated }` 并补默认值。当前 Harmony `src/module.ts` 和 `src/types.ts` 已是 `options?: Partial<DismissOptions>`；本轮补充 `src/types.ts` 注释说明 `{ animated: false }` 是请求立即隐藏，Harmony 原生仍按第 79 笔记录降级，不能保证系统无动画。等待随第 93 一起验证。 |
 | 96 | `70784fd70f` | 2025-12-03 | JS/TS | fix: dependencies array changes size between renders (#1229) | 未分析 | |
 | 97 | `59951035af` | 2025-12-09 | iOS | fix: avoid undesired `reloadInputViews` during keyboard dismissal (#1235) | 未分析 | |
 | 98 | `acbc7ae418` | 2025-12-12 | Android | fix: wrong `onEnd` event on Samsung devices when keyboard gets shown after interactive dismissal (#1240) | 未分析 | |
