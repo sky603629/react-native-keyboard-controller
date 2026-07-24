@@ -1,15 +1,19 @@
-import { View } from "react-native";
+import React from "react";
+import { useColorScheme, View } from "react-native";
 
 import type {
   FocusedInputEventsModule,
+  KeyboardBackgroundViewProps,
   KeyboardControllerNativeModule,
   KeyboardControllerProps,
   KeyboardEventsModule,
+  KeyboardExtenderProps,
   KeyboardGestureAreaProps,
   OverKeyboardViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
 import type { EmitterSubscription } from "react-native";
+import type { View as RNView } from "react-native";
 
 const NOOP = () => {};
 
@@ -40,3 +44,18 @@ export const KeyboardGestureArea =
   View as unknown as React.FC<KeyboardGestureAreaProps>;
 export const RCTOverKeyboardView =
   View as unknown as React.FC<OverKeyboardViewProps>;
+export const KeyboardBackgroundView = React.forwardRef<
+  RNView,
+  KeyboardBackgroundViewProps
+>(({ style, ...props }, ref) => {
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === "dark" ? "#2c2c2e" : "#eceff3";
+
+  return React.createElement(View, {
+    ref,
+    style: [{ backgroundColor }, style],
+    ...props,
+  });
+});
+export const RCTKeyboardExtender =
+  View as unknown as React.FC<KeyboardExtenderProps>;

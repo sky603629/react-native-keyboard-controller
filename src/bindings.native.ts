@@ -1,14 +1,23 @@
-import { NativeEventEmitter, Platform } from "react-native";
+import React from "react";
+import {
+  NativeEventEmitter,
+  Platform,
+  useColorScheme,
+  View,
+} from "react-native";
 
 import type {
   FocusedInputEventsModule,
+  KeyboardBackgroundViewProps,
   KeyboardControllerNativeModule,
   KeyboardControllerProps,
   KeyboardEventsModule,
+  KeyboardExtenderProps,
   KeyboardGestureAreaProps,
   OverKeyboardViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
+import type { View as RNView } from "react-native";
 
 const LINKING_ERROR =
   `The package 'react-native-keyboard-controller' doesn't seem to be linked. Make sure: \n\n` +
@@ -60,3 +69,18 @@ export const KeyboardGestureArea: React.FC<KeyboardGestureAreaProps> =
     : ({ children }: KeyboardGestureAreaProps) => children;
 export const RCTOverKeyboardView: React.FC<OverKeyboardViewProps> =
   require("./specs/OverKeyboardViewNativeComponent").default;
+export const KeyboardBackgroundView = React.forwardRef<
+  RNView,
+  KeyboardBackgroundViewProps
+>(({ style, ...props }, ref) => {
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === "dark" ? "#2c2c2e" : "#eceff3";
+
+  return React.createElement(View, {
+    ref,
+    style: [{ backgroundColor }, style],
+    ...props,
+  });
+});
+export const RCTKeyboardExtender =
+  View as unknown as React.FC<KeyboardExtenderProps>;

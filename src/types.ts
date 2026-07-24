@@ -117,6 +117,11 @@ export type KeyboardGestureAreaProps = {
 export type OverKeyboardViewProps = PropsWithChildren<{
   visible: boolean;
 }>;
+export type KeyboardBackgroundViewProps = PropsWithChildren<ViewProps>;
+export type KeyboardExtenderProps = PropsWithChildren<{
+  /** Controls whether this `KeyboardExtender` instance should take effect. Default is `true`. */
+  enabled?: boolean;
+}>;
 
 export type Direction = "next" | "prev" | "current";
 export type DismissOptions = {
