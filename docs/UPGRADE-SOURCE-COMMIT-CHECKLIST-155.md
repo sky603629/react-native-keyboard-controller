@@ -24,26 +24,26 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `45 / 155` 笔按时间顺序完成证据审计；另提前同步第 `91 / 155` 笔 `852fa4a223`：
+截至第 `50 / 155` 笔按时间顺序完成证据审计；另提前同步第 `91 / 155` 笔 `852fa4a223`：
 
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 45 |
-| 当前进度 | 29.0% |
+| 已按顺序处理到 | 50 |
+| 当前进度 | 32.3% |
 | 已代码同步并推送 | 21 |
-| 已分析-待测试 | 0 |
-| 测试工程已同步 | 0 |
-| 已分析-不需同步 | 21 |
+| 已分析-待测试 | 1 |
+| 测试工程已同步 | 2 |
+| 已分析-不需同步 | 23 |
 | 已分析-暂不同步 | 3 |
 | 因系统能力缺失不能完全做 | 0 |
-| 未分析 | 109 |
+| 未分析 | 104 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`45` / `155`，`5ab201112c`
-- 下一笔待处理：`46` / `155`，`f963befc1a`
+- 最后一笔已分析：`50` / `155`，`a28dbec565`
+- 下一笔待处理：`51` / `155`，`e6679bde41`
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
 
 ## 状态说明
@@ -107,11 +107,11 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 43 | `5a2e2a8184` | 2025-07-06 | Android | fix: use reflection for original `StatusBar` implementation discovery (#1008) | 已分析-不需同步 | 上游真实问题是 RN 0.80+ Kotlin `StatusBarModule` 变为 `internal` 后 Android 不能直接发现原始 StatusBar 实现，因此新增 `StatusBarModuleProxy` 反射代理。Harmony 当前 `StatusBarManagerCompat` 是本地 ETS/C++ TurboModule 注册路径，未使用 Android `StatusBarModule`、Kotlin internal class 或反射发现链路；无同类问题，不改代码。 |
 | 44 | `27fce1cc93` | 2025-07-08 | JS/TS+Android+iOS | feat: use `keyboardAppearance` instead of global appearance (#1004) | 已分析-不需同步 | 上游把 KeyboardToolbar 外观来源从全局 color scheme 改为当前 focused TextInput 的 `keyboardAppearance`，并要求 native 事件最终只返回 `dark/light`。Harmony 实测结论：RNOH 底层 `TextInputTraits`/converter 虽有 `keyboardAppearance` 枚举，但当前框架 `TextInputComponentJSIBinder` 未把 `keyboardAppearance` 暴露为 native prop，JS 写 `keyboardAppearance="light/dark"` 时 C++ 只能读到 `default`。测试工程临时补框架白名单后才生效，说明该能力依赖修改 RNOH 框架代码；按当前策略不修改框架，本库不适配，记录为鸿蒙当前无可用暴露接口。 |
 | 45 | `5ab201112c` | 2025-07-09 | JS/TS | fix: rewrite `onTextChanged` to `onSelectionChanged` event handler in `KeyboardAwareScrollView` (#546) | 代码仓已推送 | 上游把 KASV 文本变化后的滚动驱动从 `onChangeText` 改为 selection caret y，解决多行输入框只按输入框整体高度判断时无法知道光标坐标的问题。Harmony 证据：当前 C++ 已通过 ArkUI `NODE_TEXT_INPUT/AREA_CARET_OFFSET` 派发 `FocusedInputSelectionChanged` 的 `end.y`，无需新增原生实现；已同步 JS，加入 `clamp`、`lastSelection` 和 selection debounce 逻辑。测试确认多行输入/选区变化滚动无明显问题，且不回归动态 bottomOffset。 |
-| 46 | `f963befc1a` | 2025-07-12 | iOS | fix: `KeyboardExtender` on iOS 26 (#1015) | 未分析 | |
-| 47 | `49979932c7` | 2025-07-13 | JS/TS+Android+iOS | feat: preload (#1016) | 未分析 | |
-| 48 | `1c03e7b9cf` | 2025-07-15 | JS/TS | feat: preload by default (#1018) | 未分析 | |
-| 49 | `8cca8df8a3` | 2025-07-19 | iOS | feat: update `swiftformat` (#1028) | 未分析 | |
-| 50 | `a28dbec565` | 2025-07-20 | JS/TS | feat: `KeyboardAwareScrollView` full screen input support (#1026) | 未分析 | |
+| 46 | `f963befc1a` | 2025-07-12 | iOS | fix: `KeyboardExtender` on iOS 26 (#1015) | 已分析-不需同步 | 上游为 iOS 26 `KeyboardExtender` 新增 `KeyboardExtenderContainerView`，通过 `UIGlassEffect`/`UIVisualEffectView` 和 `UIInputView`/`inputAccessoryView` 适配 Liquid Glass 键盘外观。Harmony 当前 `KeyboardExtender` 已按 Android 策略实现为 JS polyfill（`KeyboardStickyView + KeyboardBackgroundView`），不存在 UIKit `inputAccessoryView`、`UIInputView` 或 iOS 26 视觉材质链路；普通应用也不能成为输入法窗口的一部分。因此不改代码，只保留 Harmony polyfill 的贴键盘上方显示回归。 |
+| 47 | `49979932c7` | 2025-07-13 | JS/TS+Android+iOS | feat: preload (#1016) | 测试工程已同步 | 上游新增 `KeyboardController.preload()`。iOS 通过隐藏 `UITextField` `becomeFirstResponder/resignFirstResponder` 预热键盘 UI，并在预热中忽略键盘事件；Android 明确做 no-op。Harmony 证据：系统 IME 独立于应用进程，普通业务应用没有 iOS 同类 app 内键盘 UI 预热机制；尝试 `showSoftKeyboard()` 会真实拉起键盘并产生事件，不能作为 preload。测试工程同步 JS API/spec/types，并把 Harmony ETS `preload()` 改为 no-op 日志，待验证 `KeyboardController.preload()` 调用不报错且不弹键盘。 |
+| 48 | `1c03e7b9cf` | 2025-07-15 | JS/TS | feat: preload by default (#1018) | 测试工程已同步 | 上游给 `KeyboardProvider` 新增 `preload?: boolean`，默认 `true`，挂载时调用 `KeyboardController.preload()`，可通过 `preload={false}` 关闭。Harmony 因第 47 笔采用 no-op，默认调用不会产生键盘显示或事件副作用；测试工程已同步 `animated.tsx` 的 prop/effect，待验证 Provider 默认挂载和 `preload={false}` 均不影响现有键盘事件。 |
+| 49 | `8cca8df8a3` | 2025-07-19 | iOS | feat: update `swiftformat` (#1028) | 已分析-不需同步 | 上游只格式化 iOS Swift 文件 `KCTextInputCompositeDelegate.swift`、`KeyboardAreaExtender.swift`，没有 JS/Android/Harmony 行为变化。Harmony 无 Swift 文件，不同步。 |
+| 50 | `a28dbec565` | 2025-07-20 | JS/TS | feat: `KeyboardAwareScrollView` full screen input support (#1026) | 已分析-待测试 | 上游继续重构 KASV：`bottomOffset` 语义从“键盘到输入框”改为“键盘到 focused TextInput 内 caret”，新增 `updateLayoutFromSelection()`，焦点切换、文本增长、粘贴和 layout 高度变化都尽量用 `lastSelection.selection.end.y` 更新临时 layout，并修正输入框同时被键盘和顶部区域覆盖的大输入框场景。Harmony 已具备 selection y 事件，理论可同步 JS；但这是 KASV 大改且紧接第 45 笔，建议单独放下一批测试，重点覆盖全屏/大高度 TextInput、顶部遮挡、粘贴、多行增长和动态 bottomOffset。 |
 | 51 | `e6679bde41` | 2025-07-21 | iOS | fix: delay delegate substitution (#1027) | 未分析 | |
 | 52 | `65586f9726` | 2025-07-22 | iOS | fix: `KeyboardBackgroundView` build on fabric (#1034) | 未分析 | |
 | 53 | `d6b93dc2d8` | 2025-07-23 | Android | fix: re-setup `WindowDimensionsListener`after JS bundle reload (#1036) | 未分析 | |
