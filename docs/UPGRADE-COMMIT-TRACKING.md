@@ -10,7 +10,7 @@
 
 1. `git status --short`：当前仓可能有未跟踪历史 docs，未确认前不要删除或纳入提交。
 2. `git branch --show-current` / `git remote -v`：当前工作分支应为 `ups`，推送目标是 `origin/ups`。
-3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已处理到第 `80 / 155`，下一笔是第 `81 / 155` `89fa05d9a8`。
+3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已处理到第 `90 / 155`，下一笔是第 `91 / 155` `852fa4a223`（已提前同步，只需复核）。
 4. 查询上游真实 diff：
 
 ```powershell
@@ -40,7 +40,7 @@ git -C $up show --patch --find-renames <hash>
 
 - 当前无待测试候选。
 - 最近已验证并回写：第 `76 / 155` `ad76c6ab56` compound `KeyboardToolbar`，以及第 `79 / 155` `692494f11d` `dismiss({ animated })` API 形状；Harmony 的 `animated=false` 当前为接口兼容降级。
-- 下一笔待分析：第 `81 / 155` `89fa05d9a8`，iOS `fix: wrong selection coordinates dispatch on iOS (#1156)`。
+- 下一笔待处理：第 `91 / 155` `852fa4a223`，已提前同步；只需复核记录和回归，然后主线可进入第 `92 / 155`。
 - 已提前同步：第 `91 / 155` `852fa4a223`，动态 `bottomOffset` over-scrolling；到第 91 时只需复核，不推进重复实现。
 
 ## 已知不可直接同步 / 易误判点
@@ -81,7 +81,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `80 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `8d3726d387`。下一笔是第 `81 / 155` 笔：`89fa05d9a8`。
+截至第 `90 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `1441ae3b59`。下一笔是第 `91 / 155` 笔：`852fa4a223`，该笔已提前同步，当前只需复核。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -217,14 +217,14 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `2a3bcee5ec` | 2025-09-08 | 触达 JS/TS | `fix: KeyboardExtender width on iPad in split mode (#1113)` | 依赖上游 `windowDidResize` 原生尺寸事件；Harmony 当前无该事件发射链路，暂不同步。 | 已分析-暂不同步 |
 | `f2d74b3bc7` | 2025-09-26 | iOS-only | `fix: KeyboardExtender initial mount on Fabric (#1135)` | iOS `inputAccessoryView`/Fabric 首挂载修复；Harmony Extender 是 JS polyfill，无 UIKit accessory attach 链路。 | 已分析-不需同步 |
 | `8d3726d387` | 2025-10-01 | Android-only | `chore: react-native 0.80 (#979)` | RN 0.80 dependency/example/Android Kotlin 兼容维护；Harmony 当前是 RNOH/RN 0.82 基线，不反向同步依赖。 | 已分析-不需同步 |
-| `4ab7be0c15` | 2025-10-13 | iOS-only | `fix: crash when unrecognized selector sent (#1153)` | 查崩溃根因是否为可选方法/版本 API；Harmony API 调用是否做能力判断。 | 待补充审计 |
-| `6503e23efd` | 2025-10-14 | iOS-only | `fix: iOS 26 + Modal (#1158)` | 查 Modal 场景键盘/窗口坐标；Harmony 弹窗、子窗口或页面栈是否有同类问题。 | 待补充审计 |
-| `3ab39a0edd` | 2025-10-20 | iOS-only | `fix: attach keyboard tracking view in advance and only when window has been changed (#1170)` | 查 tracking view attach 条件；Harmony 跟随键盘视图挂载时机需对应验证。 | 待补充审计 |
-| `99be9d3011` | 2025-10-27 | iOS-only | `fix: avoid ensureLayout calls (#1174)` | 查强制布局调用副作用；Harmony `syncUpLayout` / area-change 是否会造成重复测量或抖动。 | 待补充审计 |
-| `6e4b14d1e9` | 2025-11-03 | Android-only | `fix: match StatusBar and edge-to-edge interop according to latest spec (#1185)` | 查 edge-to-edge / 状态栏 / window insets；Harmony 系统避让模式和窗口高度是否同类。 | 待补充审计 |
-| `0dcf4b4d41` | 2025-11-03 | iOS-only | `fix: non-working release version on iOS 26 (#1184)` | 查是否为 iOS release/runtime 条件；Harmony 若无对应发布路径可记录不需同步。 | 待补充审计 |
-| `b0e60f6b32` | 2025-11-04 | iOS-only | `fix: attaching KeyboardTrackingView (#1193)` | 查 tracking view attach 生命周期；Harmony 等价视图需验证窗口变化和销毁态。 | 待补充审计 |
-| `1441ae3b59` | 2025-11-06 | Android-only | `fix: add KeyboardBackgroundView to turbo package (#1197)` | 查新原生组件是否进入包注册；Harmony 新增 BackgroundView 时需同步注册。 | 待补充审计 |
+| `4ab7be0c15` | 2025-10-13 | iOS-only | `fix: crash when unrecognized selector sent (#1153)` | iOS `KCTextInputCompositeDelegate` forwarding/selector crash 兜底；Harmony 无 ObjC/Swift delegate forwarding 链路。 | 已分析-不需同步 |
+| `6503e23efd` | 2025-10-14 | iOS-only | `fix: iOS 26 + Modal (#1158)` | iOS 26 `KeyboardTrackingView` 在 Modal/window 切换时重新 attach；Harmony 无 UIKit tracking view，键盘事件走 Window avoid area。 | 已分析-不需同步 |
+| `3ab39a0edd` | 2025-10-20 | iOS-only | `fix: attach keyboard tracking view in advance and only when window has been changed (#1170)` | 修第 84 的 attach 策略，改用 `willMove(toWindow:)`；Harmony 无对应生命周期。 | 已分析-不需同步 |
+| `99be9d3011` | 2025-10-27 | iOS-only | `fix: avoid ensureLayout calls (#1174)` | 撤第 81 的 `ensureLayout`，改 SafeKVC 读 `_comingFromJS` 过滤 selection；Harmony 无 KVC/private delegate 字段。 | 已分析-不需同步 |
+| `6e4b14d1e9` | 2025-11-03 | Android-only | `fix: match StatusBar and edge-to-edge interop according to latest spec (#1185)` | Android RN core `edgeToEdgeEnabled` BuildConfig 下忽略 StatusBar background/translucent；Harmony 无该 Gradle flag，现有 `preserveEdgeToEdge` 是本库窗口属性。 | 已分析-不需同步 |
+| `0dcf4b4d41` | 2025-11-03 | iOS-only | `fix: non-working release version on iOS 26 (#1184)` | iOS release 冷启动 rootView 未就绪，延后 tracking view attach 到 app active；Harmony 无 iOS rootView tracking view。 | 已分析-不需同步 |
+| `b0e60f6b32` | 2025-11-04 | iOS-only | `fix: attaching KeyboardTrackingView (#1193)` | iOS 在 `KeyboardControllerView.didMoveToWindow` 传 window 给 tracking view；Harmony ArkUI component instance 无 UIKit `didMoveToWindow`。 | 已分析-不需同步 |
+| `1441ae3b59` | 2025-11-06 | Android-only | `fix: add KeyboardBackgroundView to turbo package (#1197)` | Android RN < 0.74 TurboPackage 补注册 native BackgroundView；Harmony BackgroundView 是 JS `View` fallback，无 native manager 需注册。 | 已分析-不需同步 |
 | `70784fd70f` | 2025-12-03 | 触达 JS/TS | `fix: dependencies array changes size between renders (#1229)` | 查 React hooks 依赖数组稳定性；Harmony JS 必须同步或确认已覆盖。 | 待补充审计 |
 | `59951035af` | 2025-12-09 | iOS-only | `fix: avoid undesired reloadInputViews during keyboard dismissal (#1235)` | 查 dismiss 过程中是否误触发键盘重载/重开；Harmony hide/keepFocus 需验证。 | 待补充审计 |
 | `acbc7ae418` | 2025-12-12 | Android-only | `fix: wrong onEnd event on Samsung devices when keyboard gets shown after interactive dismissal (#1240)` | 查键盘 end 事件时序；Harmony 合成 move/end 是否有同类异常。 | 待补充审计 |
@@ -299,7 +299,11 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已补充审计第 `77-78 / 155` 笔：`0a97fd68ba` 是 Android double keyboard height/insets 修复，Harmony 高度来自 Window avoid area / 键盘高度事件，未走 Android `WindowInsetsCompat` 叠加路径；`f2d74b3bc7` 是 iOS `KeyboardExtender` Fabric 初挂载修复，Harmony Extender 是 JS polyfill，无 UIKit `inputAccessoryView` attach 链路；均不改代码。
 - 已同步并验证第 `79 / 155` 笔 `dismiss({ animated })` API 形状：JS `DismissOptions` 增加 `animated`，`module.ts` 默认 `animated=true` 并把 `(keepFocus, animated)` 传给 native spec；Harmony ETS 签名接收 `animated`，但由于当前无公开 API 可保证无动画隐藏软键盘，仍降级调用 `stopInputSession()`。测试工程 `KeyboardController core API` demo 增加持久 `dismiss_log`，用于观察 `dismiss_result` 从 `pending animated=false keepFocus=true` 到 `resolved animated=false keepFocus=true`；用户已确认原本一帧状态太快，保留 log 更适合观察。
 - 已补充审计第 `80 / 155` 笔 RN 0.80 维护提交：主体是 dependency/example/Gradle/lockfile 和 Android Kotlin 兼容维护；当前 Harmony 包是 RNOH/RN 0.82 基线，不反向同步 RN 0.80 依赖和 example 样式。
+- 已补充审计第 `81-86 / 155` 笔 iOS selection / `KeyboardTrackingView` / SafeKVC 线索：第 81 针对 iOS multiline selection 先引入 `ensureLayout`，但 Harmony selection 坐标来自 ArkUI caret offset，且第 86 已撤销该方案；第 82 是 ObjC/Swift composite delegate selector crash 兜底，Harmony 无 UIKit delegate forwarding；第 83-85 都是 iOS 26 `keyboardLayoutGuide` / `KeyboardTrackingView` 生命周期和 Modal attach 策略，Harmony 通过 ETS Window keyboard events / avoid area 和 C++ 合成帧，不挂 UIKit tracking view；第 86 改 SafeKVC 读取 `_comingFromJS` 过滤 selection，Harmony 无 KVC/private delegate 字段。因此整组不改代码。
+- 已补充审计第 `87 / 155` 笔 Android StatusBar edge-to-edge 互操作：上游依赖 Gradle `edgeToEdgeEnabled` 生成 Android `BuildConfig.IS_EDGE_TO_EDGE_ENABLED`，RN core edge-to-edge 开启时忽略 StatusBar `backgroundColor/translucent`。Harmony 没有该 Android BuildConfig 信号；当前 `KeyboardControllerView.preserveEdgeToEdge` 调 `setWindowLayoutFullScreen`，`StatusBarManagerCompat` 是普通 Window system bar property 兼容模块，不做无来源的 Harmony-only 状态判断。
+- 已补充审计第 `88-89 / 155` 笔 iOS 26 tracking view attach 修复：上游从 app active 延后 attach 到 `didMoveToWindow` 传 window，均依赖 UIKit `KeyboardTrackingView`；Harmony 无此视图和生命周期，不同步。
+- 已补充审计第 `90 / 155` 笔 Android `KeyboardBackgroundView` TurboPackage 注册：Harmony `KeyboardBackgroundView` 已是 JS `View` fallback，不注册 native manager，当前不需要代码改动。
 
 ## 下一步
 
-当前无待测试候选。下一笔主线源码审计是第 `81 / 155` 笔 `89fa05d9a8`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前无待测试候选。下一笔主线源码审计是第 `91 / 155` 笔 `852fa4a223`，该笔已提前同步，后续只需复核记录和回归；复核后进入第 `92 / 155` 笔 `29ad9e8947`。

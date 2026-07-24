@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已处理到第 `80 / 155` 笔 `8d3726d387`，下一笔是第 `81 / 155` 笔 `89fa05d9a8`；第 `91 / 155` 笔 `852fa4a223` 已提前同步，走到第 91 时只复核记录和回归。
+- 当前指针：已处理到第 `90 / 155` 笔 `1441ae3b59`，下一笔是第 `91 / 155` 笔 `852fa4a223`；第 `91 / 155` 笔已提前同步，走到第 91 时只复核记录和回归。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -52,26 +52,26 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `80 / 155` 笔按时间顺序完成证据审计；另提前同步第 `91 / 155` 笔 `852fa4a223`：
+截至第 `90 / 155` 笔按时间顺序完成证据审计；另提前同步第 `91 / 155` 笔 `852fa4a223`：
 
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 80 |
-| 当前进度 | 51.6% |
+| 已按顺序处理到 | 90 |
+| 当前进度 | 58.1% |
 | 已代码同步并推送 | 27 |
 | 已分析-待测试 | 0 |
 | 测试工程已同步 | 0 |
-| 已分析-不需同步 | 49 |
+| 已分析-不需同步 | 59 |
 | 已分析-暂不同步 | 4 |
 | 因系统能力缺失不能完全做 | 1 |
-| 未分析 | 74 |
+| 未分析 | 64 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`80` / `155`，`8d3726d387`
-- 下一笔待处理：`81` / `155`，`89fa05d9a8`
+- 最后一笔已分析：`90` / `155`，`1441ae3b59`
+- 下一笔待处理：`91` / `155`，`852fa4a223`（已提前同步，只需复核）
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
 
 ## 状态说明
@@ -170,16 +170,16 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 78 | `f2d74b3bc7` | 2025-09-26 | iOS | fix: `KeyboardExtender` initial mount on Fabric (#1135) | 已分析-不需同步 | iOS 修 Fabric 下 `KeyboardExtender` 初次挂载/attach 时机，依赖 `inputAccessoryView` 和 UIKit responder 生命周期。Harmony `KeyboardExtender` 是 Android 同级 JS polyfill (`KeyboardStickyView + KeyboardBackgroundView + useKeyboardAnimation`)，没有 iOS accessory 首挂载链路；不改代码。 |
 | 79 | `692494f11d` | 2025-09-30 | JS/TS+Android+iOS | feat: dismiss without animation (#1127) | 代码仓已推送 | 已同步 JS/types/spec API 形状：`KeyboardController.dismiss({ keepFocus, animated })`，native spec 改为 `dismiss(keepFocus, animated)`。Harmony ArkTS 接收 `animated` 参数但仍调用现有 `stopInputSession()`，因为当前未发现可保证无动画隐藏软键盘的公开系统 API；因此 `animated=false` 是接口兼容降级，不承诺真实无动画。测试工程 demo 用 `dismiss_log` 持久记录 `pending -> resolved`，便于观察过快的一帧状态。 |
 | 80 | `8d3726d387` | 2025-10-01 | Android | chore: react-native 0.80 (#979) | 已分析-不需同步 | 上游主体是 RN 0.80 依赖、example、Gradle/lockfile 维护，并包含 Android TextWatcher attach 与 StatusBar forwarding 兼容。当前 Harmony 包依赖基线为 RNOH/RN 0.82，本仓不反向同步 RN 0.80 dependency baseline；Android Kotlin 变更无 Harmony 对应类。示例样式改动属于上游 example，不进入主仓。 |
-| 81 | `89fa05d9a8` | 2025-10-12 | iOS | fix: wrong selection coordinates dispatch on iOS (#1156) | 未分析 | |
-| 82 | `4ab7be0c15` | 2025-10-13 | iOS | fix: crash when unrecognized selector sent (#1153) | 未分析 | |
-| 83 | `bcfe4eea4d` | 2025-10-14 | iOS | fix: ignore interactive keyboard values that are bigger than keyboard height (#1159) | 未分析 | |
-| 84 | `6503e23efd` | 2025-10-14 | iOS | fix: iOS 26 + Modal (#1158) | 未分析 | |
-| 85 | `3ab39a0edd` | 2025-10-20 | iOS | fix: attach keyboard tracking view in advance and only when window has been changed (#1170) | 未分析 | |
-| 86 | `99be9d3011` | 2025-10-27 | iOS | fix: avoid `ensureLayout` calls (#1174) | 未分析 | |
-| 87 | `6e4b14d1e9` | 2025-11-03 | Android | fix: match `StatusBar` and edge-to-edge interop according to latest spec (#1185) | 未分析 | |
-| 88 | `0dcf4b4d41` | 2025-11-03 | iOS | fix: non-working release version on iOS 26 (#1184) | 未分析 | |
-| 89 | `b0e60f6b32` | 2025-11-04 | iOS | fix: attaching `KeyboardTrackingView` (#1193) | 未分析 | |
-| 90 | `1441ae3b59` | 2025-11-06 | Android | fix: add `KeyboardBackgroundView` to turbo package (#1197) | 未分析 | |
+| 81 | `89fa05d9a8` | 2025-10-12 | iOS | fix: wrong selection coordinates dispatch on iOS (#1156) | 已分析-不需同步 | 上游 iOS 在 `UITextInput.canSelectionFitIntoLayout` 中先对非 `UITextView` 直接返回 true，并调用 `layoutManager.ensureLayout(for:)` 修正 multiline selection rect 读取；同 commit 还修 iOS `KeyboardExtenderContainerView.intrinsicContentSize` 可见性。Harmony selection 坐标来自 ArkUI `NODE_TEXT_INPUT_CARET_OFFSET` / `NODE_TEXT_AREA_CARET_OFFSET`，并在 C++ `onTextSelectionChange` 后 `syncUpLayout()` 再派发；不存在 UIKit `UITextView.layoutManager` 或 Swift `intrinsicContentSize` 链路。且第 86 又撤销 `ensureLayout` 方案，本 commit 不单独同步。 |
+| 82 | `4ab7be0c15` | 2025-10-13 | iOS | fix: crash when unrecognized selector sent (#1153) | 已分析-不需同步 | iOS `KCTextInputCompositeDelegate` 覆写 `doesNotRecognizeSelector`，避免 UIKit delegate 被回收/置空后 forwarding 仍把 `scrollViewDidScroll:` 等 selector 发给 composite delegate 造成 crash。Harmony 无 Objective-C/Swift delegate forwarding、`UITextViewDelegate` / `UITextFieldDelegate` 替换链路；focused input 事件由 RNOH TextInput/TextArea 节点 delegate 直接回调 C++，不改代码。 |
+| 83 | `bcfe4eea4d` | 2025-10-14 | iOS | fix: ignore interactive keyboard values that are bigger than keyboard height (#1159) | 已分析-不需同步 | iOS 26 `KeyboardTrackingView` 读取 `keyboardLayoutGuide` 时过滤 `keyboardPosition > keyboardHeight` 的不可能 interactive 值，避免 `KeyboardGestureArea offset` 场景闪一下。Harmony 当前没有 iOS `keyboardLayoutGuide`、`KeyboardTrackingView` 或真实 interactive dismissal 逐帧来源；C++ 只根据窗口键盘高度变化合成 start/move/end。当前不改代码。 |
+| 84 | `6503e23efd` | 2025-10-14 | iOS | fix: iOS 26 + Modal (#1158) | 已分析-不需同步 | iOS 26 非透明 `Modal` 会让原 rootView detach，上游改为在 `UIWindow.didBecomeVisibleNotification` 后把 `KeyboardTrackingView` 挂到 topmost view，并缓存 `currentAttachedView`。Harmony 没有 UIKit window/rootView/`keyboardLayoutGuide` tracking view 结构；Modal 场景仍走系统 Window keyboard events / avoid area 获取高度，不按此 iOS attach 策略修改。 |
+| 85 | `3ab39a0edd` | 2025-10-20 | iOS | fix: attach keyboard tracking view in advance and only when window has been changed (#1170) | 已分析-不需同步 | 上游回收第 84 的 aggressive `didBecomeVisibleNotification` 策略，改用 `willMove(toWindow:)` 仅在当前 tracking view 被 detach 时重新 attach，并用 `isAttaching` 防递归。Harmony 无 `KeyboardTrackingView` 和 UIKit `willMove(toWindow:)` 生命周期；不改代码。 |
+| 86 | `99be9d3011` | 2025-10-27 | iOS | fix: avoid `ensureLayout` calls (#1174) | 已分析-不需同步 | 上游发现第 81 的 `ensureLayout` 会改 RN TextInput 内部状态，改为 SafeKVC 读取 `textInputDelegate._comingFromJS`，当 JS 正在更新输入内容时过滤 selection 事件，同时用 safe KVC 读取 `nativeId`。Harmony 没有 KVC/private `_comingFromJS` 字段，也没有 UIKit `textInputDelegate`；当前 selection 由 ArkUI 节点回调，不能照搬该 iOS 私有字段过滤。 |
+| 87 | `6e4b14d1e9` | 2025-11-03 | Android | fix: match `StatusBar` and edge-to-edge interop according to latest spec (#1185) | 已分析-不需同步 | Android 通过 Gradle `edgeToEdgeEnabled` 暴露 `BuildConfig.IS_EDGE_TO_EDGE_ENABLED`，RN core edge-to-edge 开启时忽略 StatusBar `backgroundColor/translucent` 修改。Harmony 没有 Android BuildConfig/Gradle flag；本库窗口全屏/避让由 `KeyboardControllerView.preserveEdgeToEdge` 调 `setWindowLayoutFullScreen`，`StatusBarManagerCompat` 只是普通 Window system bar property 兼容模块。没有可等价读取“RN core edge-to-edge enabled”的信号，当前不改代码；若后续 Harmony 暴露同类全局 edge-to-edge 状态，再单独处理。 |
+| 88 | `0dcf4b4d41` | 2025-11-03 | iOS | fix: non-working release version on iOS 26 (#1184) | 已分析-不需同步 | iOS release 冷启动时 rootView 可能还不可用，上游把 `KeyboardTrackingView` attach 延后到 `UIApplication.didBecomeActiveNotification`。Harmony 键盘事件监听在 ETS `startKeyboardObserver` 中对当前 window 注册，不依赖 iOS rootView 或 app active notification 来挂 tracking view；不改代码。 |
+| 89 | `b0e60f6b32` | 2025-11-04 | iOS | fix: attaching `KeyboardTrackingView` (#1193) | 已分析-不需同步 | 上游又修第 88：dev build 可能错过 `didBecomeActive`，因此把 `KeyboardTrackingView` 公开，并在 iOS `KeyboardControllerView.didMoveToWindow` 时把 `window` 传入 `attachToTopmostView`。Harmony `KeyboardControllerViewComponentInstance` 没有 UIKit `didMoveToWindow`，当前按 ArkUI component instance 和 ETS window listener 工作；无 tracking view 可挂，不改代码。 |
+| 90 | `1441ae3b59` | 2025-11-06 | Android | fix: add `KeyboardBackgroundView` to turbo package (#1197) | 已分析-不需同步 | Android 仅把 `KeyboardBackgroundViewManager` 补进 RN < 0.74 `TurboPackage`。Harmony 当前 `KeyboardBackgroundView` 已按前序策略实现为 JS `View` fallback，`keyboardControllerPackage.cpp` 不注册 native BackgroundView manager，也不需要为 fallback 补原生 component descriptor；不改代码。 |
 | 91 | `852fa4a223` | 2025-11-14 | JS/TS | fix: dynamic `bottomOffset` over-scrolling (#1204) | 代码仓已推送 | 为修复 `c5c00778f2` 测试中复现的二次滚动叠加问题，已提前同步；后续到第 91 笔时只需复核。 |
 | 92 | `29ad9e8947` | 2025-11-21 | JS/TS | refactor: don't use private reanimated API (#1209) | 未分析 | |
 | 93 | `41858c78f9` | 2025-11-24 | JS/TS | feat: `useAnimatedKeyboard` compat layer (#1220) | 未分析 | |
