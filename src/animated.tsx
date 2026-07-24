@@ -18,6 +18,7 @@ import type {
   FocusedInputHandler,
   FocusedInputLayoutChangedEvent,
   KeyboardControllerProps,
+  KeyboardProviderProps,
   KeyboardHandler,
   NativeEvent,
 } from "./types";
@@ -43,50 +44,6 @@ const styles = StyleSheet.create<Styles>({
     position: "absolute",
   },
 });
-
-type KeyboardProviderProps = {
-  children: React.ReactNode;
-  /**
-   * Set the value to `true`, if you use translucent status bar on Android.
-   * If you already control status bar translucency via `react-native-screens`
-   * or `StatusBar` component from `react-native`, you can ignore it.
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/14
-   * @platform android
-   */
-  statusBarTranslucent?: boolean;
-  /**
-   * Set the value to `true`, if you use translucent navigation bar on Android.
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/119
-   * @platform android
-   */
-  navigationBarTranslucent?: boolean;
-  /**
-   * A boolean property indicating whether to keep edge-to-edge mode always enabled (even when you disable the module).
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/592
-   * @platform android
-   */
-  preserveEdgeToEdge?: boolean;
-  /**
-   * A boolean prop indicating whether the module is enabled. It indicate only initial state,
-   * i. e. if you try to change this prop after component mount it will not have any effect.
-   * To change the property in runtime use `useKeyboardController` hook and `setEnabled` method.
-   * Defaults to `true`.
-   */
-  enabled?: boolean;
-  /**
-   * A boolean prop indicating whether to preload the keyboard to reduce time-to-interaction (TTI) on first input focus.
-   * Defaults to `true`.
-   *
-   * @platform ios
-   */
-  preload?: boolean;
-};
 
 // capture `Platform.OS` in separate variable to avoid deep workletization of entire RN package
 // see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/393 and https://github.com/kirillzyusko/react-native-keyboard-controller/issues/294 for more details

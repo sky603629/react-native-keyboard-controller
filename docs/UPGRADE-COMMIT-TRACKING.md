@@ -10,7 +10,7 @@
 
 1. `git status --short`：当前仓可能有未跟踪历史 docs，未确认前不要删除或纳入提交。
 2. `git branch --show-current` / `git remote -v`：当前工作分支应为 `ups`，推送目标是 `origin/ups`。
-3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `95 / 155`；第 `93`、`95 / 155` 已同步到测试工程和主仓工作区，等待用户验证；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；下一笔是第 `96 / 155` `70784fd70f`。
+3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `100 / 155`；第 `93`、`95 / 155` 已本地提交 `a31f12f8`，当前分支相对 `origin/ups` 仍 `ahead 1` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `96`、`100 / 155` 已同步到测试工程和主仓工作区，下一笔是第 `101 / 155` `b5fb83596c`。
 4. 查询上游真实 diff：
 
 ```powershell
@@ -38,9 +38,10 @@ git -C $up show --patch --find-renames <hash>
 
 ## 当前关键状态
 
-- 当前待测试候选：第 `93`、`95 / 155`，已同步到 `E:\Devsoftware\25p5` 测试工程并补 demo；用户验证通过后再提交推送主仓。第 `94 / 155` 已分析但暂不同步。
+- 当前待测试候选：第 `96`、`100 / 155`，已同步到 `E:\Devsoftware\25p5` 测试工程和主仓工作区；第 `96` 是 KASV `useSmoothKeyboardHandler` deps 浅拷贝 warning 修复，第 `100` 是 `KeyboardProviderProps` 类型导出重构。第 `97-99 / 155` 已分析为当前不需同步。
+- 最近本地提交：第 `93`、`95 / 155` 已提交为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`，当前分支仍 `ahead 1`，尚未推送 `origin/ups`。
 - 最近已验证并回写：第 `76 / 155` `ad76c6ab56` compound `KeyboardToolbar`，以及第 `79 / 155` `692494f11d` `dismiss({ animated })` API 形状；Harmony 的 `animated=false` 当前为接口兼容降级。
-- 下一笔待处理：第 `96 / 155` `70784fd70f`，需等第 `93`、`95 / 155` 验证和提交完成后再继续。
+- 下一笔待处理：第 `101 / 155` `b5fb83596c`。第 `96`、`100 / 155` 验证通过后，回写提交本批并继续下一批分析。
 - 已提前同步：第 `91 / 155` `852fa4a223`，动态 `bottomOffset` over-scrolling；到第 91 时只需复核，不推进重复实现。
 
 ## 已知不可直接同步 / 易误判点
@@ -306,8 +307,9 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已修正并补强第 `90 / 155` 笔 Android `KeyboardBackgroundView` TurboPackage 注册审计：该提交只给 Android RN < 0.74 的 `TurboPackage` 暴露既有 native manager；Harmony 在第 `38-39 / 155` 笔已明确走 Android/default 的 JS polyfill 路线，即 `KeyboardBackgroundView` 用 `View` fallback、`KeyboardExtender` 用 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` 组合，因此不是漏注册 native manager，当前不需要代码改动。
 - 已复核第 `91 / 155` 笔动态 `bottomOffset` over-scrolling：上游 `performScrollWithPositionRestoration` 已在早前 `17d373c` 提前同步并验证，本轮不重复改代码。
 - 已分析第 `92 / 155` 笔 Reanimated 私有 API 重构：Harmony 分支没有上游要删除的 `event-handler.*` / `event-mappings.ts`，也没有 `react-native-reanimated/src/core` 深导入；当前 `src/reanimated.native.ts` 已用 `useEvent/useHandler` 封装事件，目标风险已覆盖，不需要同步代码。
-- 已同步到测试工程第 `93`、`95 / 155` 笔：第 93 新增 `src/compat.ts`、`KeyboardState` 常量和 `useAnimatedKeyboard()`，并把内部键盘状态类型改为 `IKeyboardState`；第 95 补 `dismiss(options?: Partial<DismissOptions>)` 注释。第 94 经实测确认依赖当前 selection/caret 坐标，Harmony 原生现阶段不能稳定等价上报，因此明确标记 `KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 接口当前不支持，并撤销 JS command/spec/bindings/context/KASV ref 方法、C++/ArkTS `layoutDidSynchronize` 转发和相关 demo；测试工程和 demo 备份仓已移除 `assureFocusedInputVisible` / `toggle validation + assure` 入口。
+- 已本地提交第 `93`、`95 / 155` 笔为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`，当前分支仍 `ahead 1` 尚未推送：第 93 新增 `src/compat.ts`、`KeyboardState` 常量和 `useAnimatedKeyboard()`，并把内部键盘状态类型改为 `IKeyboardState`；第 95 补 `dismiss(options?: Partial<DismissOptions>)` 注释。第 94 经实测确认依赖当前 selection/caret 坐标，Harmony 原生现阶段不能稳定等价上报，因此明确标记 `KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 接口当前不支持，并撤销 JS command/spec/bindings/context/KASV ref 方法、C++/ArkTS `layoutDidSynchronize` 转发和相关 demo；测试工程和 demo 备份仓已移除 `assureFocusedInputVisible` / `toggle validation + assure` 入口。
+- 已分析并同步第 `96-100 / 155` 笔中的可做项：第 96 `70784fd70f` 是纯 JS KASV deps 浅拷贝 warning 修复，Harmony 当前同文件同样复用同一 deps，已同步主仓和测试包 `src` / `lib/commonjs` / `lib/module`；第 97 `59951035af` 是 iOS `KeyboardExtenderContainerView` / `UIResponder.reloadInputViews()` 浮点高度比较修复，Harmony 无 UIKit accessory 链路，不同步；第 98 `acbc7ae418` 是 Android Samsung interactive dismissal 后 `onEnd` 延后一帧读取 `WindowInsetsCompat`，Harmony 不走 Android `WindowInsetsAnimationCallback`，不改 demo；第 99 `afeccd120e` 是 Android/iOS Fabric codegen 名称和 `common/cpp` 路径缩短，Harmony 使用 `rnoh_keyboard_controller` 和手写 `harmony/keyboard_controller/src/main/cpp` 组件注册，单改 codegen name 有破坏风险，不同步；第 100 `e5438be3df` 是 `KeyboardProviderProps` 类型拆分，已按现有 `src/types.ts` 单文件结构最小同步主仓和测试包 `src` / `lib/typescript` 类型产物。
 
 ## 下一步
 
-请先在测试工程验证第 `93`、`95 / 155` 笔：`useAnimatedKeyboard` compat 文本应随键盘变为 `OPENING/OPEN/CLOSING/CLOSED` 并显示高度；`dismiss(options?: Partial<DismissOptions>)` 维持现有参数形状和注释。第 `94 / 155` 的 `KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 已标为 Harmony selection/caret 能力限制下接口不支持，不再提供 demo 入口。验证通过后提交并推送本批；之后进入第 `96 / 155` 笔 `70784fd70f`。
+请先验证第 `96`、`100 / 155`：第 96 观察 KASV 相关页面不再出现依赖数组长度变化 warning；第 100 只需确认 TypeScript/导出类型无异常，不需要新增 demo。验证通过后提交本批；之后从第 `101 / 155` 笔 `b5fb83596c` 继续按 5 笔一批分析。
