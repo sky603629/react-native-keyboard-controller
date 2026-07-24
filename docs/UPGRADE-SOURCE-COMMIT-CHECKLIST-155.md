@@ -92,7 +92,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 30 | `76226df4d9` | 2025-06-02 | Android | fix: `OverKeyboardView` crash with `a11y` (#962) | 未分析 | |
 | 31 | `49898cd5eb` | 2025-06-03 | iOS | ci: use newer XCode (#964) | 未分析 | |
 | 32 | `98df8d88e2` | 2025-06-03 | iOS | fix: switch between inputs with `KeyboardGestureArea` on iOS (#938) | 未分析 | |
-| 33 | `331293a9cc` | 2025-06-09 | Android | fix: 2 memory leaks (#966) | 未分析 | |
+| 33 | `331293a9cc` | 2025-06-09 | Android | fix: 2 memory leaks (#966) | 代码仓已推送 | 鸿蒙无 Android 同名类，但已按等价生命周期问题修复 window keyboard listener / TurboModule cleanup。 |
 | 34 | `371cf7baef` | 2025-06-10 | iOS | fix: iOS 26 non-firing `onMove` handler (#971) | 未分析 | |
 | 35 | `fb95fc1364` | 2025-06-12 | JS/TS | fix: `KeyboardToolbar` on iOS 26 (#978) | 未分析 | |
 | 36 | `9de91159df` | 2025-06-13 | iOS | perf: pause `CADisplayLink` instead of re-creation (#980) | 未分析 | |
