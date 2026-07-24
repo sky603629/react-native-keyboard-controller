@@ -56,6 +56,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `43f6631e` | 同步上游 `a57fa4b427` + `347fef35c0`：新增 Harmony `KeyboardBackgroundView` JS fallback 与 `KeyboardExtender` Android 同级别 polyfill；实现方式与 Android 一致，和 iOS 原生 accessory / 私有键盘背景材质能力不一致。 |
 | `04da6bf4` | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
 | `376f84d9` | 同步上游 `5ab201112c`：`KeyboardAwareScrollView` 改用 selection caret y 驱动多行输入滚动，加入 `lastSelection`、`clamp` 和 selection debounce；Harmony 原生侧已具备 selection 坐标事件，无需 C++/ETS 修改。 |
+| `323be336` | 同步上游 `49979932c7` + `1c03e7b9cf`：新增 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生侧按 Android 策略做 no-op，避免真实拉起键盘。 |
 
 ## Commit 台账
 
@@ -236,10 +237,10 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已分析第 `44 / 155` 笔 `keyboardAppearance` 外观来源改造，实测发现能力依赖 RNOH 框架 `TextInputComponentJSIBinder` 暴露 `keyboardAppearance` native prop；当前鸿蒙框架未暴露该接口，JS 传入 `light/dark` 时本库 C++ 只能读到 `default`。按“不修改框架代码”的策略，本仓不适配该 commit，记录为鸿蒙当前无可用暴露接口。
 - 已同步并推送第 `45 / 155` 笔 KASV selection 驱动滚动：用 `onSelectionChange` 的 caret y 替代 `onChangeText` 主驱动；Harmony 原生已通过 `FocusedInputSelectionChanged` 提供 `selection.end.y`，本轮仅需 JS 侧同步。测试确认无明显问题。
 - 已分析第 `46 / 155` 笔 iOS 26 `KeyboardExtender` 视觉修复：依赖 UIKit `UIInputView`/`inputAccessoryView`/`UIGlassEffect`，Harmony 当前走 Android 同级 polyfill，无同类原生链路，不同步。
-- 已在测试工程同步第 `47-48 / 155` 笔 `preload`：JS 增加 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生采用 Android 同策略 no-op，避免真实调用 `showSoftKeyboard()` 拉起键盘，待验证默认挂载不弹键盘且事件不受影响。
+- 已同步并推送第 `47-48 / 155` 笔 `preload`：JS 增加 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生采用 Android 同策略 no-op，避免真实调用 `showSoftKeyboard()` 拉起键盘。测试确认 `preload()` 调用和默认 `KeyboardProvider` 挂载不会自动弹键盘，事件无异常。
 - 已分析第 `49 / 155` 笔 iOS `swiftformat`，纯 Swift 格式化，Harmony 不同步。
 - 已分析第 `50 / 155` 笔 KASV full screen input support：继续把 KASV 滚动核心改为 caret 坐标语义，适合下一批单独同步测试，重点覆盖大高度/全屏 TextInput、顶部遮挡、粘贴、多行增长和动态 `bottomOffset`。
 
 ## 下一步
 
-当前待测试候选：第 `47-48 / 155` 笔 `preload` 已同步测试工程；第 `50 / 155` 笔 `a28dbec565` 建议下一批单独同步。下一笔主线源码审计是第 `51 / 155` 笔 `e6679bde41`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选：第 `50 / 155` 笔 `a28dbec565` 建议下一批单独同步。下一笔主线源码审计是第 `51 / 155` 笔 `e6679bde41`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。

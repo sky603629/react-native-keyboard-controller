@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
 import { KeyboardControllerView } from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
+import { KeyboardController } from "./module";
 import {
   useAnimatedKeyboardHandler,
   useFocusedInputLayoutHandler,
@@ -78,6 +79,13 @@ type KeyboardProviderProps = {
    * Defaults to `true`.
    */
   enabled?: boolean;
+  /**
+   * A boolean prop indicating whether to preload the keyboard to reduce time-to-interaction (TTI) on first input focus.
+   * Defaults to `true`.
+   *
+   * @platform ios
+   */
+  preload?: boolean;
 };
 
 // capture `Platform.OS` in separate variable to avoid deep workletization of entire RN package
@@ -90,6 +98,7 @@ export const KeyboardProvider = ({
   navigationBarTranslucent,
   preserveEdgeToEdge,
   enabled: initiallyEnabled = true,
+  preload = true,
 }: KeyboardProviderProps) => {
   // state
   const [enabled, setEnabled] = useState(initiallyEnabled);
@@ -210,6 +219,13 @@ export const KeyboardProvider = ({
     },
     [],
   );
+
+  useEffect(() => {
+    if (preload) {
+      KeyboardController.preload();
+    }
+  }, [preload]);
+
   return (
     <KeyboardContext.Provider value={context}>
       <KeyboardControllerViewAnimated

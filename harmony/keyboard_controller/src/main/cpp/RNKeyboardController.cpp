@@ -36,6 +36,7 @@ KeyboardController::KeyboardController(const ArkTSTurboModule::Context ctx, cons
         ARK_METHOD_METADATA(getConstants, 0),
         ARK_METHOD_METADATA(setInputMode, 1),
         ARK_METHOD_METADATA(setDefaultMode, 0),
+        ARK_METHOD_METADATA(preload, 0),
         ARK_METHOD_METADATA(dismiss, 1),
         ARK_METHOD_METADATA(setFocusTo, 1),
         ARK_METHOD_METADATA(addListener, 1),
