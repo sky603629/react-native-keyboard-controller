@@ -57,7 +57,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `04da6bf4` | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
 | `376f84d9` | 同步上游 `5ab201112c`：`KeyboardAwareScrollView` 改用 selection caret y 驱动多行输入滚动，加入 `lastSelection`、`clamp` 和 selection debounce；Harmony 原生侧已具备 selection 坐标事件，无需 C++/ETS 修改。 |
 | `d7eba660` | 同步上游 `49979932c7` + `1c03e7b9cf`：新增 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生侧按 Android 策略做 no-op，避免真实拉起键盘。 |
-| `43a0cce2` | 同步上游 `aff3cbe7d1`：`KeyboardAvoidingView enabled=false` 时直接返回空 animated style，完全关闭 `height/position/padding/translate-with-padding` 避让行为。 |
+| `08714c47` | 同步上游 `aff3cbe7d1`：`KeyboardAvoidingView enabled=false` 时直接返回空 animated style，完全关闭 `height/position/padding/translate-with-padding` 避让行为。 |
 
 ## Commit 台账
 
