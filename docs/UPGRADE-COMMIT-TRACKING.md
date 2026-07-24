@@ -10,7 +10,7 @@
 
 1. `git status --short`：当前仓可能有未跟踪历史 docs，未确认前不要删除或纳入提交。
 2. `git branch --show-current` / `git remote -v`：当前工作分支应为 `ups`，推送目标是 `origin/ups`。
-3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `100 / 155`；第 `93`、`95 / 155` 已本地提交 `a31f12f8`，当前分支相对 `origin/ups` 仍 `ahead 1` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `96`、`100 / 155` 已同步到测试工程和主仓工作区，下一笔是第 `101 / 155` `b5fb83596c`。
+3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `105 / 155`；第 `93`、`95 / 155` 已本地提交 `a31f12f8`，第 `96`、`100 / 155` 已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；下一笔是第 `106 / 155` `3589930ca5`。
 4. 查询上游真实 diff：
 
 ```powershell
@@ -28,6 +28,7 @@ git -C $up show --patch --find-renames <hash>
 - 一笔 commit 的结论必须来自真实 diff 和 Harmony 对应链路分析；不能只按标题、平台目录或“看起来不相关”判断。
 - Android-only / iOS-only 必须写清楚 Harmony 是否存在同类问题；没有同类问题时也要列出对应证据，例如无 UIKit delegate、无 Android ViewManager、无 `WindowDimensionsListener`、无 `inputAccessoryView` 等。
 - JS API/types/hooks 侧尽量与上游一致；不要增加 Harmony-only public 字段，不改上游属性名。关键属性/API 名在中文说明中保持英文。
+- 平台语义优先级：Harmony 适配优先判断能否按 iOS 语义实现；如果 Harmony 原生能力/事件时序/系统 API 无法等价 iOS，再按 Android/非 iOS 路线实现或记录不支持。不能仅凭上游条件写成 `OS !== "ios"` 就机械地把 Harmony 归入 Android，必须说明为什么不能走 iOS。
 - 不修改 RNOH/RN 框架代码完成本库能力。如果测试时发现只有改框架才生效，回退测试改动并记录为“Harmony 当前无可用暴露接口”。
 - Harmony 缺公开系统 API 时，不新增误导性的原生空实现；JS fallback 只能在符合历史策略且不会冒充完整能力时使用。
 - 测试工程 JS 改动通常要同步 `src`、`lib/module`、`lib/commonjs`，必要时同步 `lib/typescript`；只改 `.tsx` 后无效时，先查实际 bundle 解析路径。
@@ -38,10 +39,10 @@ git -C $up show --patch --find-renames <hash>
 
 ## 当前关键状态
 
-- 当前待测试候选：第 `96`、`100 / 155`，已同步到 `E:\Devsoftware\25p5` 测试工程和主仓工作区；第 `96` 是 KASV `useSmoothKeyboardHandler` deps 浅拷贝 warning 修复，第 `100` 是 `KeyboardProviderProps` 类型导出重构。第 `97-99 / 155` 已分析为当前不需同步。
-- 最近本地提交：第 `93`、`95 / 155` 已提交为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`，当前分支仍 `ahead 1`，尚未推送 `origin/ups`。
+- 当前待测试候选：无。第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-105 / 155` 已分析为当前不需同步。
+- 最近本地提交：第 `93`、`95 / 155` 已提交为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`；第 `96`、`100 / 155` 已提交为 `fd5f3e1a 同步 KASV deps 修复和 Provider 类型导出`；第 `101 / 155` 已提交为 `同步 KAV 非 iOS 位移条件`；当前分支仍未推送 `origin/ups`。
 - 最近已验证并回写：第 `76 / 155` `ad76c6ab56` compound `KeyboardToolbar`，以及第 `79 / 155` `692494f11d` `dismiss({ animated })` API 形状；Harmony 的 `animated=false` 当前为接口兼容降级。
-- 下一笔待处理：第 `101 / 155` `b5fb83596c`。第 `96`、`100 / 155` 验证通过后，回写提交本批并继续下一批分析。
+- 下一笔待处理：第 `106 / 155` `3589930ca5`。
 - 已提前同步：第 `91 / 155` `852fa4a223`，动态 `bottomOffset` over-scrolling；到第 91 时只需复核，不推进重复实现。
 
 ## 已知不可直接同步 / 易误判点
@@ -308,8 +309,9 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已复核第 `91 / 155` 笔动态 `bottomOffset` over-scrolling：上游 `performScrollWithPositionRestoration` 已在早前 `17d373c` 提前同步并验证，本轮不重复改代码。
 - 已分析第 `92 / 155` 笔 Reanimated 私有 API 重构：Harmony 分支没有上游要删除的 `event-handler.*` / `event-mappings.ts`，也没有 `react-native-reanimated/src/core` 深导入；当前 `src/reanimated.native.ts` 已用 `useEvent/useHandler` 封装事件，目标风险已覆盖，不需要同步代码。
 - 已本地提交第 `93`、`95 / 155` 笔为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`，当前分支仍 `ahead 1` 尚未推送：第 93 新增 `src/compat.ts`、`KeyboardState` 常量和 `useAnimatedKeyboard()`，并把内部键盘状态类型改为 `IKeyboardState`；第 95 补 `dismiss(options?: Partial<DismissOptions>)` 注释。第 94 经实测确认依赖当前 selection/caret 坐标，Harmony 原生现阶段不能稳定等价上报，因此明确标记 `KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 接口当前不支持，并撤销 JS command/spec/bindings/context/KASV ref 方法、C++/ArkTS `layoutDidSynchronize` 转发和相关 demo；测试工程和 demo 备份仓已移除 `assureFocusedInputVisible` / `toggle validation + assure` 入口。
-- 已分析并同步第 `96-100 / 155` 笔中的可做项：第 96 `70784fd70f` 是纯 JS KASV deps 浅拷贝 warning 修复，Harmony 当前同文件同样复用同一 deps，已同步主仓和测试包 `src` / `lib/commonjs` / `lib/module`；第 97 `59951035af` 是 iOS `KeyboardExtenderContainerView` / `UIResponder.reloadInputViews()` 浮点高度比较修复，Harmony 无 UIKit accessory 链路，不同步；第 98 `acbc7ae418` 是 Android Samsung interactive dismissal 后 `onEnd` 延后一帧读取 `WindowInsetsCompat`，Harmony 不走 Android `WindowInsetsAnimationCallback`，不改 demo；第 99 `afeccd120e` 是 Android/iOS Fabric codegen 名称和 `common/cpp` 路径缩短，Harmony 使用 `rnoh_keyboard_controller` 和手写 `harmony/keyboard_controller/src/main/cpp` 组件注册，单改 codegen name 有破坏风险，不同步；第 100 `e5438be3df` 是 `KeyboardProviderProps` 类型拆分，已按现有 `src/types.ts` 单文件结构最小同步主仓和测试包 `src` / `lib/typescript` 类型产物。
+- 已分析并同步第 `96-100 / 155` 笔中的可做项：第 96 `70784fd70f` 是纯 JS KASV deps 浅拷贝 warning 修复，Harmony 当前同文件同样复用同一 deps，已同步主仓和测试包 `src` / `lib/commonjs` / `lib/module`；第 97 `59951035af` 是 iOS `KeyboardExtenderContainerView` / `UIResponder.reloadInputViews()` 浮点高度比较修复，Harmony 无 UIKit accessory 链路，不同步；第 98 `acbc7ae418` 是 Android Samsung interactive dismissal 后 `onEnd` 延后一帧读取 `WindowInsetsCompat`，Harmony 不走 Android `WindowInsetsAnimationCallback`，不改 demo；第 99 `afeccd120e` 是 Android/iOS Fabric codegen 名称和 `common/cpp` 路径缩短，Harmony 使用 `rnoh_keyboard_controller` 和手写 `harmony/keyboard_controller/src/main/cpp` 组件注册，单改 codegen name 有破坏风险，不同步；第 100 `e5438be3df` 是 `KeyboardProviderProps` 类型拆分，已按现有 `src/types.ts` 单文件结构最小同步主仓和测试包 `src` / `lib/typescript` 类型产物。本批已本地提交为 `fd5f3e1a`，尚未推送。
+- 已分析并同步第 `101-105 / 155` 笔中的可做项：第 101 `b5fb83596c` 是纯 JS KAV 条件翻转，从 `OS === "android"` 改为 `OS !== "ios"`。按平台语义优先级复核，Harmony 不能走 iOS 的起始帧目标值语义，因为当前没有 iOS `KeyboardTrackingView` / `keyboardLayoutGuide` / UIKit 协同 layout animation；Harmony C++ 合成 `onMove` 帧，更接近 Android/非 iOS 的逐帧更新，所以已同步主仓 `src/components/KeyboardAvoidingView/hooks.ts`。用户确认该纯 JS 条件修复无需单独测试，直接提交主仓。第 102 `838f546c48` 是 Android `OverKeyboardRootViewGroup.onInterceptHoverEvent` super 调用修复，Harmony 当前无 `OverKeyboardView` 原生 overlay/hover intercept 链路，不同步；第 103 `91df02ecd4` 是 iOS hybrid app 中 `KeyboardTrackingView` 挂载 top controller 修复，Harmony 无 UIKit controller/tracking view 链路，不同步；第 104 `68395bf201` 是 Android/iOS Fabric codegen 名继续缩短到 `RNKC` 和 Windows CI，Harmony 手写 C++ 注册且第 99 已不改 codegen name，不同步；第 105 `8041105fea` 是 iOS 手动 did 事件方案，Harmony 已基于 ArkTS will/did 和 keyboardHeightChange 发事件，无 iOS `KeyboardMovementObserver`/`CADisplayLink` 链路，不同步。
 
 ## 下一步
 
-请先验证第 `96`、`100 / 155`：第 96 观察 KASV 相关页面不再出现依赖数组长度变化 warning；第 100 只需确认 TypeScript/导出类型无异常，不需要新增 demo。验证通过后提交本批；之后从第 `101 / 155` 笔 `b5fb83596c` 继续按 5 笔一批分析。
+从第 `106 / 155` 笔 `3589930ca5` 继续按 5 笔一批分析。

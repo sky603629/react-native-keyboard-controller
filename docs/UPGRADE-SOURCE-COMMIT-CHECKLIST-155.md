@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已分析到第 `100 / 155` 笔 `e5438be3df`；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，当前分支相对 `origin/ups` 仍 `ahead 1` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `96`、`100 / 155` 已同步到测试工程和主仓工作区，等待验证后再提交；第 `97-99 / 155` 当前不需同步；下一笔待分析是第 `101 / 155` 笔 `b5fb83596c`。
+- 当前指针：已分析到第 `105 / 155` 笔 `8041105fea`；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `102-105 / 155` 当前不需同步；下一笔待分析是第 `106 / 155` 笔 `3589930ca5`。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -36,6 +36,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 - 框架边界：不修改 RNOH / RN 框架代码来完成本库适配。若能力依赖框架暴露缺失 API，例如 `keyboardAppearance` native prop，应回退测试改动并记录为 Harmony 当前无可用接口。
 - 不支持策略：Harmony 缺公开系统 API 时，不新增“只有名字、没有语义”的原生空实现，不用普通 View / 固定返回值冒充完整原生能力；按历史策略保持 JS 上游形状或 JS fallback，并在台账写清楚降级/不支持原因。
 - JS 同步规则：JS public API、types、hooks、纯 JS 逻辑尽量与上游一致；不要添加 Harmony-only public 字段或改上游属性名。属性名/API 名保留英文。
+- 平台语义优先级：Harmony 适配优先判断能否按 iOS 语义实现；如果 Harmony 原生能力/事件时序/系统 API 无法等价 iOS，再按 Android/非 iOS 路线实现或记录不支持。不能仅凭上游条件写成 `OS !== "ios"` 就机械地把 Harmony 归入 Android，必须说明为什么不能走 iOS。
 - 测试工程 JS 生效：测试包常见路径是 `E:\Devsoftware\25p5\node_modules\@react-native-ohos\react-native-keyboard-controller`；必要时同时同步 `src`、`lib/module`、`lib/commonjs`、`lib/typescript`，避免实际 bundle 走产物时看不到修改。
 - Demo 规则：demo 只服务当前 commit/当前能力；可以为了验证补最小入口，验证完若属于临时 demo 或 unsupported 能力要回退。不要提前暴露后续 commit 的 API。
 - 台账字段：每笔必须写“修改了什么功能和内容 / 功能效果 / 同步或不同步原因 / 测试工程验证状态”，不能只写“已同步”。
@@ -52,28 +53,29 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `100 / 155` 笔按时间顺序完成证据审计；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8` 但尚未推送；第 `94 / 155` 暂不同步；第 `96`、`100 / 155` 已同步到测试工程和主仓工作区，等待验证后再提交；第 `97-99 / 155` 当前不需同步：
+截至第 `105 / 155` 笔按时间顺序完成证据审计；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交，当前均尚未推送；第 `94 / 155` 暂不同步；第 `102-105 / 155` 当前不需同步：
 
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 100 |
-| 当前进度 | 64.5% |
+| 已按顺序处理到 | 105 |
+| 当前进度 | 67.7% |
 | 已代码同步并推送 | 27 |
+| 本地已提交未推送 | 5 |
 | 已分析-待测试 | 0 |
-| 测试工程已同步 | 2 |
-| 已分析-不需同步 | 63 |
+| 测试工程已同步 | 0 |
+| 已分析-不需同步 | 67 |
 | 已分析-暂不同步 | 5 |
 | 因系统能力缺失不能完全做 | 1 |
-| 未分析 | 55 |
+| 未分析 | 50 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`100` / `155`，`e5438be3df`
-- 下一笔待处理：`101` / `155`，`b5fb83596c`
+- 最后一笔已分析：`105` / `155`，`8041105fea`
+- 下一笔待处理：`106` / `155`，`3589930ca5`
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
-- 当前待验证：`96`、`100` / `155`，已同步到 `E:\Devsoftware\25p5` 测试工程和主仓工作区；第 `96` 是 KASV `useSmoothKeyboardHandler` deps 浅拷贝 warning 修复，第 `100` 是 `KeyboardProviderProps` 类型导出重构。第 `97-99 / 155` 不纳入同步。
+- 当前待验证：无。第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-105 / 155` 不纳入同步。
 
 ## 状态说明
 
@@ -187,16 +189,16 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 93 | `41858c78f9` | 2025-11-24 | JS/TS | feat: `useAnimatedKeyboard` compat layer (#1220) | 本地已提交未推送 | 上游新增 Reanimated `useAnimatedKeyboard` 迁移兼容层，并将公开状态类型从 `KeyboardState` 改名为 `IKeyboardState`，避免与新导出的 `KeyboardState` 常量冲突。已在主仓和测试工程同步 `src/compat.ts`、`src/index.ts`、`src/types.ts`、`src/hooks/useKeyboardState/index.ts`：导出 `KeyboardState.UNKNOWN/OPENING/OPEN/CLOSING/CLOSED` 和 `useAnimatedKeyboard()`，其 `height/state` 由 `useKeyboardHandler` 驱动；测试工程 `Hook_useReanimatedKeyboardAnimation` demo 已增加 compat 状态文本。用户已确认 compat 文本可随键盘变为 `OPENING/OPEN/CLOSING/CLOSED` 并显示高度，本地提交为 `a31f12f8`。 |
 | 94 | `14ededa4c6` | 2025-11-25 | JS/TS+Android+iOS | feat: sync layout from JS (#1213) | 已分析-暂不同步 | 接口不支持：`KeyboardAwareScrollViewRef.assureFocusedInputVisible()` 当前 Harmony 不支持，因此不导出该 ref 接口，也不补 `useReanimatedFocusedInput().update()` / `KeyboardControllerViewCommands.synchronizeFocusedInputLayout` / `KeyboardController::layoutDidSynchronize` 公开链路。上游该能力不只是同步 focused input layout，还依赖当前 selection/caret 坐标：KASV 会用 `absoluteY + selection.end.y` 判断光标是否在键盘上方。Harmony 当前原生侧 selection/caret 上报不能稳定等价 Android/iOS：聚焦后不一定立即派发当前 selection，command 同步 layout 时也不会同步当前 caret；ArkUI caret offset 读取还存在拿不到或坐标语义不完整的情况。因此按“JS 尽量保持上游一致、差异收敛到原生”的原则，本轮撤销 JS/spec/context/KASV ref 适配和 demo，不同步该上游接口。后续只有在 Harmony 原生能稳定提供 focus 后和 layout sync 后的当前 selection/caret 坐标时，才能重新评估支持。 |
 | 95 | `4bdf4e5b3e` | 2025-12-01 | JS/TS | fix: types mismatch for `dismiss` method (#1225) | 本地已提交未推送 | 上游只修公开类型/JSDoc：`dismiss(options)` 的 options 应为 `Partial<DismissOptions>`，因为实现已经允许只传 `{ keepFocus }` 或 `{ animated }` 并补默认值。当前 Harmony `src/module.ts` 和 `src/types.ts` 已是 `options?: Partial<DismissOptions>`；本轮补充 `src/types.ts` 注释说明 `{ animated: false }` 是请求立即隐藏，Harmony 原生仍按第 79 笔记录降级，不能保证系统无动画。本地已随第 93 提交为 `a31f12f8`。 |
-| 96 | `70784fd70f` | 2025-12-03 | JS/TS | fix: dependencies array changes size between renders (#1229) | 测试工程已同步 | 上游在 `useSmoothKeyboardHandler` 中把传给 `useAnimatedReaction` 的 `deps` 改成 `deps ? [...deps] : deps`，原因是 Reanimated 的 `useAnimatedReaction` 和后续 `useKeyboardHandler` 都会向同一个依赖数组 push worklet hash，导致 React 报 “final argument changed size between renders”。Harmony 当前同文件仍把 `deps as unknown[]` 原样传入，且同样复用给 `useKeyboardHandler`；本轮已同步主仓 `src/components/KeyboardAwareScrollView/useSmoothKeyboardHandler.ts` 和测试包 `src` / `lib/commonjs` / `lib/module`。无需新增 demo，观察点是 KASV 相关页面不再出现依赖数组长度变化 warning。 |
+| 96 | `70784fd70f` | 2025-12-03 | JS/TS | fix: dependencies array changes size between renders (#1229) | 本地已提交未推送 | 上游在 `useSmoothKeyboardHandler` 中把传给 `useAnimatedReaction` 的 `deps` 改成 `deps ? [...deps] : deps`，原因是 Reanimated 的 `useAnimatedReaction` 和后续 `useKeyboardHandler` 都会向同一个依赖数组 push worklet hash，导致 React 报 “final argument changed size between renders”。Harmony 当前同文件仍把 `deps as unknown[]` 原样传入，且同样复用给 `useKeyboardHandler`；已同步主仓 `src/components/KeyboardAwareScrollView/useSmoothKeyboardHandler.ts` 和测试包 `src` / `lib/commonjs` / `lib/module`。无需新增 demo，观察点是 KASV 相关页面不再出现依赖数组长度变化 warning。本地提交为 `fd5f3e1a`。 |
 | 97 | `59951035af` | 2025-12-09 | iOS | fix: avoid undesired `reloadInputViews` during keyboard dismissal (#1235) | 已分析-不需同步 | 上游只改 iOS `KeyboardExtenderContainerView.swift`：用 `abs(frame.height - desiredHeight) > 0.001` 替代浮点高度直接比较，避免 dismissal 时频繁 `UIResponder.reloadInputViews()` 重新拉起键盘，并在 `setupContainerSpecifics()` 默认更新 `UIInputView` frame。Harmony 当前 `KeyboardExtender` 是 JS polyfill 路线，不存在 UIKit `UIInputView` / `inputAccessoryView` / `reloadInputViews` 链路，因此没有可同步原生代码；示例只补 iOS e2e 用 `testID`，不进入 Harmony demo。 |
 | 98 | `acbc7ae418` | 2025-12-12 | Android | fix: wrong `onEnd` event on Samsung devices when keyboard gets shown after interactive dismissal (#1240) | 已分析-不需同步 | 上游 Android 在 `KeyboardAnimationCallback.onEnd` 的 interactive 分支把 `view.post(runnable)` 改为 `view.postDelayed(runnable, UIThread.NEXT_FRAME)`，延后一帧读取 `WindowInsetsCompat`，修 Samsung 交互收起后马上显示键盘时 `onEnd` 拿到旧 frame 的问题；示例补 `onEnd` 更新动画值。Harmony 键盘高度来自 ETS window keyboard/avoid-area 事件，C++ 合成帧链路不使用 Android `WindowInsetsAnimationCompat`、`View.post` 或 `InteractiveKeyboardProvider.isInteractive`，当前无同类 stale Android insets 问题证据；不改 demo，后续若 Harmony 复现 interactive `onEnd` 末帧错误，应基于 Harmony 事件源专项处理。 |
 | 99 | `afeccd120e` | 2025-12-17 | Android+iOS | fix: shorter codegen name (#1251) | 已分析-不需同步 | 上游把 `package.json codegenConfig.name` 从 `reactnativekeyboardcontroller` 改成 `keyboardcontroller`，并批量重命名 Android/iOS Fabric 生成头文件路径和 `common/cpp/react/renderer/components/<name>`，用于缩短 Windows CMake object path。Harmony 仓没有上游 `common/cpp` 目录，也没有 Android/iOS Fabric CMake/podspec 链路；当前 native 组件在 `harmony/keyboard_controller/src/main/cpp` 手写注册，CMake target 是 `rnoh_keyboard_controller`。单独改 `package.json` 的 codegen name 可能导致 Harmony codegen-harmony 生成物与现有手写 include/组件名不一致，因此当前不同步。 |
-| 100 | `e5438be3df` | 2025-12-22 | JS/TS | refactor: move `KeyboardProvider` props in separate file (#1255) | 测试工程已同步 | 上游为 Web 复用类型，把 `KeyboardProviderProps` 从 `src/animated.tsx` 移到 `src/types/provider.ts` 并从 `src/types/index.ts` 导出；无运行时行为变化。Harmony 当前是单文件 `src/types.ts` 结构，没有 `src/types/` 目录；本轮按 Harmony 现有结构最小同步：把 `KeyboardProviderProps` 导出到 `src/types.ts`，`animated.tsx` 改为 type import，并同步测试包 `src` / `lib/typescript` 类型产物。无需 demo，验证点是 TypeScript 编译/导出类型可用。 |
-| 101 | `b5fb83596c` | 2025-12-23 | JS/TS | refactor: change conditional code in `KeyboardAvoidingView` (#1257) | 未分析 | |
-| 102 | `838f546c48` | 2025-12-30 | Android | Call correct onInterceptHoverEvent super in onInterceptHoverEvent() (#1260) | 未分析 | |
-| 103 | `91df02ecd4` | 2026-01-07 | iOS | fix: navigation in iOS hybrid app (#1266) | 未分析 | |
-| 104 | `68395bf201` | 2026-01-12 | Android+iOS | fix: windows builds (#1248) | 未分析 | |
-| 105 | `8041105fea` | 2026-01-15 | iOS | fix: manual did events (#1161) | 未分析 | |
+| 100 | `e5438be3df` | 2025-12-22 | JS/TS | refactor: move `KeyboardProvider` props in separate file (#1255) | 本地已提交未推送 | 上游为 Web 复用类型，把 `KeyboardProviderProps` 从 `src/animated.tsx` 移到 `src/types/provider.ts` 并从 `src/types/index.ts` 导出；无运行时行为变化。Harmony 当前是单文件 `src/types.ts` 结构，没有 `src/types/` 目录；已按 Harmony 现有结构最小同步：把 `KeyboardProviderProps` 导出到 `src/types.ts`，`animated.tsx` 改为 type import，并同步测试包 `src` / `lib/typescript` 类型产物。无需 demo，验证点是 TypeScript 编译/导出类型可用。本地提交为 `fd5f3e1a`。 |
+| 101 | `b5fb83596c` | 2025-12-23 | JS/TS | refactor: change conditional code in `KeyboardAvoidingView` (#1257) | 本地已提交未推送 | 上游只改 `src/components/KeyboardAvoidingView/hooks.ts`：`useTranslateAnimation` 的 `onMove` / `onEnd` 条件从 `OS === "android"` 翻成 `OS !== "ios"`。按 Harmony 适配原则先评估 iOS 路线：iOS 这里依赖系统键盘动画与 layout 更新协同，`translate` 在 `onStart` 写入目标 progress 后可跟随系统动画；Harmony 当前没有 iOS `KeyboardTrackingView` / `keyboardLayoutGuide` / UIKit 协同 layout animation 链路，原生侧是 `KeyboardControllerViewComponentInstance` 用 C++ 合成 `onKeyboardMove` 帧驱动高度和 progress，因此不能等价走 iOS 的“起始帧写目标值”语义。Harmony 旧代码仍是 `OS === "android"`，导致 `Platform.OS === "harmony"` 不会在普通 `onMove` / `onEnd` 中更新 translate；本轮按 Android/非 iOS 的逐帧 `onMove` 路线同步为 `OS !== "ios"`。用户确认该纯 JS 条件修复无需单独测试，直接提交主仓。 |
+| 102 | `838f546c48` | 2025-12-30 | Android | Call correct onInterceptHoverEvent super in onInterceptHoverEvent() (#1260) | 已分析-不需同步 | 上游只修 Android `OverKeyboardRootViewGroup.onInterceptHoverEvent` 的 copy/paste 错误：从 `super.onHoverEvent(event)` 改为 `super.onInterceptHoverEvent(event)`，避免 hover/pointer/accessibility 事件绕过正确拦截路径。Harmony 当前没有 Android `OverKeyboardRootViewGroup`，也没有已注册的 `OverKeyboardView` 原生 overlay host；`harmony/keyboard_controller/src/main/cpp/keyboardControllerPackage.cpp` 仍只注册 `RNKeyboardControllerView` 和 `RNKeyboardGestureArea`。因此当前无对应 hover intercept 链路，不改代码。未来若实现 Harmony `OverKeyboardView` 原生 overlay，应把 hover/accessibility dispatch 纳入验收。 |
+| 103 | `91df02ecd4` | 2026-01-07 | iOS | fix: navigation in iOS hybrid app (#1266) | 已分析-不需同步 | 上游只改 iOS `KeyboardTrackingView.attachToTopmostView`：当 `window?.rootViewController.view.window == nil` 时改用 `UIApplication.topViewController()`，修 hybrid app 从原生页面导航到 RN 页面时 tracking view 绑到已 detached root controller，导致 iOS 26 `onMove` 不工作。Harmony 键盘位置来自 ETS window keyboard/avoid-area 事件和 C++ 合成帧，不存在 UIKit `UIViewController`、`KeyboardTrackingView`、`keyboardLayoutGuide` 挂载到 top controller 的链路；不改代码。 |
+| 104 | `68395bf201` | 2026-01-12 | Android+iOS | fix: windows builds (#1248) | 已分析-不需同步 | 上游继续第 99 笔 codegen 缩名：把 `keyboardcontroller` 进一步改成 `RNKC`，新增 Windows Android Fabric CI，并批量重命名 Android/iOS Fabric generated include 路径、`common/cpp/react/renderer/components/RNKC`、podspec `header_dir` 和 `package.json codegenConfig.name`。Harmony 仓没有上游 `common/cpp` 和 Android/iOS Fabric CMake/podspec 体系，当前 native 组件在 `harmony/keyboard_controller/src/main/cpp` 手写注册，CMake target 是 `rnoh_keyboard_controller`。由于第 99 已明确不改 codegen name，本提交也不同步；单独改 package codegen 名会增加 Harmony codegen-harmony 生成物和手写注册不一致风险。 |
+| 105 | `8041105fea` | 2026-01-15 | iOS | fix: manual did events (#1161) | 已分析-不需同步 | 上游 iOS 不再依赖系统 `keyboardDidShow/Hide`，而是在 `KeyboardMovementObserver` 持有 `KeyboardAnimation.duration/lastValue` 后，通过 `DispatchQueue.main.asyncAfter` 在 will + animation duration 后手动触发 did 事件；同时让 `KeyboardAreaExtender` 订阅自定义 `.keyboardDidAppear`。这是为 iOS 26 系统 did 事件时序异常服务。Harmony 原生事件来自 ArkTS `keyboardWillShow/Hide`（API20+）和 `keyboardHeightChange` did 路径，低版本才在 did 时同时机补发 will；没有 iOS `KeyboardMovementObserver`、`CADisplayLink`、`KeyboardTrackingView`、`inputAccessoryView` 或系统 did 事件延迟问题。当前不按 iOS 手动 did 方案改 Harmony；若后续 Harmony 发现 did 事件早于动画结束，应基于 ArkTS `KeyboardInfo.config.duration` 和 `keyboardHeightChange` 实测另做原生策略。 |
 | 106 | `3589930ca5` | 2026-01-23 | Android | fix: do not use `emitDeviceEvent` directly (#1282) | 未分析 | |
 | 107 | `a0d49aeb7a` | 2026-01-27 | JS/TS | refactor: add `useCombinedRef` to separate the code logically (#1287) | 未分析 | |
 | 108 | `36abe0b8b3` | 2026-01-28 | JS/TS+Android | feat: add `ClippingScrollView` component (#1289) | 未分析 | |
