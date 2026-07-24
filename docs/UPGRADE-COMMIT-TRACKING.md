@@ -34,7 +34,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `42 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `46bb921a5d`。下一笔是第 `43 / 155` 笔：`5a2e2a8184`。
+截至第 `45 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `5ab201112c`。下一笔是第 `46 / 155` 笔：`f963befc1a`。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -231,7 +231,10 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已补充审计第 `30-37 / 155` 笔：`76226df4d9`、`49898cd5eb`、`98df8d88e2`、`331293a9cc`、`371cf7baef`、`fb95fc1364`、`9de91159df`、`c8398fc0e3` 经 Harmony 对应链路分析后当前不需同步；其中 `331293a9cc` 曾按同类风险提交 `0b03f32`，测试发现事件异常后已回退，最终记录为 Harmony 无同类问题。
 - 已同步并验证第 `38-39 / 155` 笔：`KeyboardBackgroundView` 在 Harmony 以 JS `View` fallback 模拟键盘背景；`KeyboardExtender` 采用与 Android 一致的 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill。文档明确该方案和 iOS 原生 accessory / 私有键盘背景材质能力不一致。
 - 已同步并推送第 `40-41 / 155` 笔：`useKeyboardState(selector)` 与去除 JS `monkey-patch` 深导入依赖；已审计第 `42 / 155` 笔 iOS `shouldIgnoreKeyboardEvents` 复位问题，Harmony 无同类 UIKit responder/accessory 状态机，当前不改代码。
+- 已审计第 `43 / 155` 笔 Android `StatusBarModule` 反射修复，Harmony 使用本地 `StatusBarManagerCompat` TurboModule，无 Android Kotlin internal/reflection 同类问题，当前不改代码。
+- 已在测试工程同步第 `44 / 155` 笔 `keyboardAppearance` 外观来源改造：JS 侧 Toolbar 改用 `useKeyboardState(state => state.appearance)`，Harmony C++/ETS 从 focused TextInput `keyboardAppearance` 推导 `dark/light`，待验证。
+- 已在测试工程同步第 `45 / 155` 笔 KASV selection 驱动滚动：用 `onSelectionChange` 的 caret y 替代 `onChangeText` 主驱动，并清理测试工程 KASV 旧调试日志，待验证。
 
 ## 下一步
 
-当前待测试候选已清空。下一笔主线源码审计是第 `43 / 155` 笔 `5a2e2a8184`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选：第 `44 / 155` 笔 `27fce1cc93`、第 `45 / 155` 笔 `5ab201112c`。下一笔主线源码审计是第 `46 / 155` 笔 `f963befc1a`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
