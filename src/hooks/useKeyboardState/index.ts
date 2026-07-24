@@ -12,22 +12,28 @@ const getLatestState = () => ({
   isVisible: KeyboardController.isVisible(),
 });
 
-export const useKeyboardState = (): KeyboardState => {
-  const [state, setState] = useState(getLatestState);
+type KeyboardStateSelector<T> = (state: KeyboardState) => T;
+
+const defaultSelector: KeyboardStateSelector<KeyboardState> = (state) => state;
+
+function useKeyboardState<T = KeyboardState>(
+  selector: KeyboardStateSelector<T> = defaultSelector as KeyboardStateSelector<T>,
+): T {
+  const [state, setState] = useState<T>(() => selector(getLatestState()));
 
   useEffect(() => {
     const subscriptions = EVENTS.map((event) =>
       KeyboardEvents.addListener(event, () =>
         // state will be updated by global listener first,
         // so we simply read it and don't derive data from the event
-        setState(getLatestState),
+        setState(selector(getLatestState())),
       ),
     );
 
     // we might have missed an update between reading a value in render and
     // `addListener` in this handler, so we set it here. If there was
     // no change, React will filter out this update as a no-op.
-    setState(getLatestState);
+    setState(selector(getLatestState()));
 
     return () => {
       subscriptions.forEach((subscription) => subscription.remove());
@@ -35,4 +41,6 @@ export const useKeyboardState = (): KeyboardState => {
   }, []);
 
   return state;
-};
+}
+
+export { useKeyboardState };

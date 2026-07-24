@@ -29,20 +29,21 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 39 |
-| 当前进度 | 25.2% |
-| 已代码同步并推送 | 18 |
+| 已按顺序处理到 | 42 |
+| 当前进度 | 27.1% |
+| 已代码同步并推送 | 20 |
 | 已分析-待测试 | 0 |
-| 已分析-不需同步 | 19 |
+| 测试工程已同步 | 0 |
+| 已分析-不需同步 | 20 |
 | 已分析-暂不同步 | 3 |
 | 因系统能力缺失不能完全做 | 0 |
-| 未分析 | 115 |
+| 未分析 | 112 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`39` / `155`，`347fef35c0`
-- 下一笔待处理：`40` / `155`，`60ec0ceab8`
+- 最后一笔已分析：`42` / `155`，`46bb921a5d`
+- 下一笔待处理：`43` / `155`，`5a2e2a8184`
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
 
 ## 状态说明
@@ -100,9 +101,9 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 37 | `c8398fc0e3` | 2025-06-16 | Android | refactor: don't inject package context (#983) | 已分析-不需同步 | 上游问题链路：Android `createViewManagers(reactContext)` 把 `ReactApplicationContext` 传入各 ViewManager/Impl，但 Impl 实际只在 `createViewInstance(ThemedReactContext)` 时使用实例 context，构造注入已无用，因此移除。Harmony 证据：`keyboardControllerPackage.cpp/.h` 通过 RNOH `Package::Context` 创建 TurboModule，通过 `ComponentInstance::Context` 创建 C++ component；没有 Java/Kotlin ViewManager 层，也没有把 application context 存进 manager 再长期持有的路径。当前不改代码；生命周期持有风险已在 window listener 审计中单独处理。 |
 | 38 | `a57fa4b427` | 2025-06-20 | JS/TS+Android+iOS | feat: `KeyboardBackgroundView` (#981) | 代码仓已推送 | 上游能力：新增视觉组件，用于模拟/匹配系统键盘背景。iOS 用私有 `UIKBBackdropView` 匹配键盘材质；Android 无真实背景 API，采用当前 IME package + 深浅色 + hardcoded skin 表推断颜色。Harmony API 证据：普通应用可用 `inputMethod.getCurrentInputMethod()` 获取当前输入法属性，可用 `TextInput.keyboardAppearance()` 请求键盘样式但“需要输入法适配后生效”；`window.getWindowAvoidArea(TYPE_KEYBOARD)` 只返回固定态软键盘区域；未发现读取系统键盘背景色/材质或复用键盘 backdrop 的公开 API。最终处理：不新增 Harmony native spec，JS 导出 `KeyboardBackgroundView`，底层用 `View` fallback 并按 `colorScheme` 给默认浅/深色背景，业务 `style` 可覆盖。该策略与 Android “模拟键盘背景”的能力级别一致，和 iOS 私有材质/原生背景能力不一致。 |
 | 39 | `347fef35c0` | 2025-06-26 | JS/TS+Android+iOS | feat: `KeyboardExtender` (#982) | 代码仓已推送 | 上游能力：iOS 用 `UIInputView(inputViewStyle: keyboard)` 挂到 `UITextField/UITextView.inputAccessoryView`，是真正扩展键盘高度；Android 明确无法原生实现，使用 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill。Harmony API 证据：IME Kit 的 `inputMethodEngine.getInputMethodAbility()` / `createPanel()` / `Panel.show()` 明确面向“输入法应用”，不是普通业务 App；ArkUI `TextInput.customKeyboard()` 会替换系统输入法而不是扩展系统键盘；`WindowStage.createSubWindow*` 只能创建应用子窗口，不会成为输入法窗口的一部分。最终处理：不新增空的 Harmony native `KeyboardExtender`，JS 侧采用与 Android 一致的 polyfill：`KeyboardStickyView + KeyboardBackgroundView + useKeyboardAnimation().progress`，效果是跟随键盘上方显示并模拟背景；和 iOS 系统级 keyboard accessory / 扩展键盘高度语义不一致。测试工程 `KeyboardExtenderExample` 已验证 `enabled`、children 交互和背景容器正常。 |
-| 40 | `60ec0ceab8` | 2025-06-30 | JS/TS | feat: keyboard state selector (#998) | 未分析 | |
-| 41 | `ecb3595085` | 2025-07-01 | JS/TS+Android | refactor: do not rely on deep imports (#1000) | 未分析 | |
-| 42 | `46bb921a5d` | 2025-07-02 | iOS | fix: reset `shouldIgnoreKeyboardEvents` to `false` on `resignFirstResponder` (#996) | 未分析 | |
+| 40 | `60ec0ceab8` | 2025-06-30 | JS/TS | feat: keyboard state selector (#998) | 代码仓已推送 | 上游给 `useKeyboardState` 增加 selector 参数，业务可写 `useKeyboardState((state) => state.isVisible)` 只取需要的状态片段，减少无关 re-render。已同步代码仓 `src/hooks/useKeyboardState/index.ts`；测试工程 demo 以黄色 selector 区块和 JSON `selectorIsVisible` 字段验证通过。 |
+| 41 | `ecb3595085` | 2025-07-01 | JS/TS+Android | refactor: do not rely on deep imports (#1000) | 代码仓已推送 | 上游移除 JS `monkey-patch`，避免依赖 `react-native/Libraries/Components/StatusBar/NativeStatusBarManagerAndroid` 深导入；Android 侧改由原生 `StatusBarManager` override 处理 edge-to-edge 兼容。Harmony 已有本地 `StatusBarManagerCompat` TurboModule 注册，但没有 Android 原生 module override 链路，本轮只同步 JS 去依赖：删除 `KeyboardProvider` 中 apply/revert monkey patch effect，并删除不再引用的 monkey-patch 文件；保留 Harmony 现有键盘事件和动画分支。 |
+| 42 | `46bb921a5d` | 2025-07-02 | iOS | fix: reset `shouldIgnoreKeyboardEvents` to `false` on `resignFirstResponder` (#996) | 已分析-不需同步 | 上游修 iOS `KeyboardGestureArea` / `InvisibleInputAccessoryView` 场景：延迟 `resignFirstResponder` 时如果 native-stack 手势关闭页面，可能没有后续 `keyboardDidAppear` 来清掉 `shouldIgnoreKeyboardEvents`，导致后续键盘事件被过滤。Harmony 搜索未发现 `shouldIgnoreKeyboardEvents`、`KeyboardEventsIgnorer`、`InvisibleInputAccessoryView`、`inputAccessoryView`、`resignFirstResponder`、`KeyboardAreaExtender` 链路；当前 KGA 通过 ArkUI touch 调 ETS `dismiss/show`，不存在 UIKit responder 延迟 detach 状态机。因此不改代码，只保留快速返回/页面切换场景的键盘事件回归。 |
 | 43 | `5a2e2a8184` | 2025-07-06 | Android | fix: use reflection for original `StatusBar` implementation discovery (#1008) | 未分析 | |
 | 44 | `27fce1cc93` | 2025-07-08 | JS/TS+Android+iOS | feat: use `keyboardAppearance` instead of global appearance (#1004) | 未分析 | |
 | 45 | `5ab201112c` | 2025-07-09 | JS/TS | fix: rewrite `onTextChanged` to `onSelectionChanged` event handler in `KeyboardAwareScrollView` (#546) | 未分析 | |

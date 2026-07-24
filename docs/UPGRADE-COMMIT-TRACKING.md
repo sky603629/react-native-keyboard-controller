@@ -34,7 +34,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `39 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `347fef35c0`。下一笔是第 `40 / 155` 笔：`60ec0ceab8`。
+截至第 `42 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `46bb921a5d`。下一笔是第 `43 / 155` 笔：`5a2e2a8184`。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -53,7 +53,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `c2a9838` | 同步上游 `9011a90a78` + `0071eb058d`：`KeyboardAwareScrollView enabled=false` 不再挂载底部 Reanimated padding view，并新增 `findNodeHandle` 平台封装。 |
 | `17d373c` | 同步上游 `c5c00778f2` + `e431917472`，并提前同步 `852fa4a223`：`KeyboardAwareScrollView` 支持动态 `bottomOffset` 且避免过度滚动；`KeyboardAvoidingView behavior="height"` 避免写入 0/负高度。 |
 | `0b03f32` | 已回退：曾尝试把上游 `331293a9cc` 扩展为 Harmony window keyboard listener 生命周期修复；测试发现会导致键盘事件异常，最终判断 Harmony 无 Android 同类问题，不同步该代码。 |
-| 当前提交 | 同步上游 `a57fa4b427` + `347fef35c0`：新增 Harmony `KeyboardBackgroundView` JS fallback 与 `KeyboardExtender` Android 同级别 polyfill；实现方式与 Android 一致，和 iOS 原生 accessory / 私有键盘背景材质能力不一致。 |
+| `43f6631e` | 同步上游 `a57fa4b427` + `347fef35c0`：新增 Harmony `KeyboardBackgroundView` JS fallback 与 `KeyboardExtender` Android 同级别 polyfill；实现方式与 Android 一致，和 iOS 原生 accessory / 私有键盘背景材质能力不一致。 |
+| 本次提交 | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
 
 ## Commit 台账
 
@@ -114,6 +115,14 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | ---: | --- | --- | --- |
 | 38 | `a57fa4b427` | 代码仓已推送 | `KeyboardBackgroundView` 是视觉组件：iOS 通过私有 `UIKBBackdropView` 匹配键盘材质，Android 通过当前 IME package、系统深浅色和 hardcoded skin 表推断颜色。Harmony 无公开 API 读取当前系统键盘背景色/材质或复用键盘 backdrop，因此不新增 native spec；本次以 JS `View` fallback 导出 `KeyboardBackgroundView`，按 `colorScheme` 给默认浅/深色背景，业务 `style` 可覆盖。该实现与 Android 一样属于模拟键盘背景，和 iOS 私有材质能力不一致。 |
 | 39 | `347fef35c0` | 代码仓已推送 | `KeyboardExtender` 的 iOS 真能力依赖 `UIInputView(inputViewStyle: keyboard)` + `inputAccessoryView`，让业务子树成为键盘的一部分并增加键盘高度；Harmony 普通应用侧无等价原生 accessory/panel API。Android 上游也使用 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill，本次 Harmony 采用同样 JS 组合，效果是在键盘上方跟随显示并模拟背景，和 iOS 系统级 keyboard accessory 语义不一致。测试工程已验证 `enabled`、children 按钮交互和背景容器正常。 |
+
+## 第 40-42 / 155 本批同步与审计
+
+| 源码顺序 | 上游 commit | 结论 | Harmony API 证据 / 处理方案 |
+| ---: | --- | --- | --- |
+| 40 | `60ec0ceab8` | 代码仓已推送 | `useKeyboardState` 新增 selector 参数，能力效果是允许业务只选择 `isVisible`、`height` 等必要片段，避免完整键盘 state 每次变化都触发使用方重渲染。已同步代码仓 `src/hooks/useKeyboardState/index.ts`；测试工程 demo 以黄色 selector 区块和 JSON `selectorIsVisible` 字段验证通过。 |
+| 41 | `ecb3595085` | 代码仓已推送 | 上游删除 JS `monkey-patch`，避免 RN 0.80+ 对 `react-native/Libraries/Components/StatusBar/NativeStatusBarManagerAndroid` 深导入警告，Android 原生改用 `StatusBarManager` 覆盖原模块。Harmony 有本地 `StatusBarManagerCompat` TurboModule，但无 Android module override 机制；因此只同步 JS 去依赖和删除未引用 monkey-patch 文件，不改 Harmony 原生 StatusBar/键盘事件实现。 |
+| 42 | `46bb921a5d` | 已分析-不需同步 | iOS 修 `shouldIgnoreKeyboardEvents` 在延迟 `resignFirstResponder` 后未复位的问题。Harmony 代码中未发现 `shouldIgnoreKeyboardEvents` / `KeyboardEventsIgnorer` / `InvisibleInputAccessoryView` / `inputAccessoryView` / `resignFirstResponder` / `KeyboardAreaExtender` 链路；`KeyboardGestureArea` 是 ArkUI touch -> ETS `dismiss/show`，不存在 UIKit responder 延迟 detach 导致事件过滤标志残留的问题。 |
 
 ## 补充审计规则：平台 only 不能直接跳过
 
@@ -221,7 +230,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已验证并推送 `c5c00778f2`、`e431917472`；因动态 `bottomOffset` 测试复现 over-scrolling，提前同步并验证 `852fa4a223`，本仓提交 `17d373c`。
 - 已补充审计第 `30-37 / 155` 笔：`76226df4d9`、`49898cd5eb`、`98df8d88e2`、`331293a9cc`、`371cf7baef`、`fb95fc1364`、`9de91159df`、`c8398fc0e3` 经 Harmony 对应链路分析后当前不需同步；其中 `331293a9cc` 曾按同类风险提交 `0b03f32`，测试发现事件异常后已回退，最终记录为 Harmony 无同类问题。
 - 已同步并验证第 `38-39 / 155` 笔：`KeyboardBackgroundView` 在 Harmony 以 JS `View` fallback 模拟键盘背景；`KeyboardExtender` 采用与 Android 一致的 `KeyboardBackgroundView + KeyboardStickyView + useKeyboardAnimation` polyfill。文档明确该方案和 iOS 原生 accessory / 私有键盘背景材质能力不一致。
+- 已同步并推送第 `40-41 / 155` 笔：`useKeyboardState(selector)` 与去除 JS `monkey-patch` 深导入依赖；已审计第 `42 / 155` 笔 iOS `shouldIgnoreKeyboardEvents` 复位问题，Harmony 无同类 UIKit responder/accessory 状态机，当前不改代码。
 
 ## 下一步
 
-当前待测试候选已清空。下一笔主线源码审计是第 `40 / 155` 笔 `60ec0ceab8`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前待测试候选已清空。下一笔主线源码审计是第 `43 / 155` 笔 `5a2e2a8184`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。

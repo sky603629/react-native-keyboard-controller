@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
 import { KeyboardControllerView } from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
-import { applyMonkeyPatch, revertMonkeyPatch } from "./monkey-patch";
 import {
   useAnimatedKeyboardHandler,
   useFocusedInputLayoutHandler,
@@ -211,15 +210,6 @@ export const KeyboardProvider = ({
     },
     [],
   );
-  // effects
-  useEffect(() => {
-    if (enabled) {
-      applyMonkeyPatch();
-    } else {
-      revertMonkeyPatch();
-    }
-  }, [enabled]);
-
   return (
     <KeyboardContext.Provider value={context}>
       <KeyboardControllerViewAnimated
