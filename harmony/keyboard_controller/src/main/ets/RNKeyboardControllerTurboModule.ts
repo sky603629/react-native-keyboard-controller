@@ -157,10 +157,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
    * @description 删除监听事件
    * */
   removeListeners(count: number): void {
-    let num = this.eventListeners.length;
-    if (num>0) {
-      this.eventListeners = [];
-    }
+    Logger.info('removeListeners count=' + count);
   }
 
   private supportListeners() {
