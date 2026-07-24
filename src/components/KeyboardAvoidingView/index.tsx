@@ -130,13 +130,16 @@ const KeyboardAvoidingView = forwardRef<
     );
 
     const animatedStyle = useAnimatedStyle(() => {
+      if (!enabled) {
+        return {};
+      }
+
       const bottom = interpolateToRelativeKeyboardHeight(
         keyboard.progress.value,
       );
       const translateY = interpolateToRelativeKeyboardHeight(translate.value);
       const paddingBottom = interpolateToRelativeKeyboardHeight(padding.value);
-      const bottomHeight = enabled ? bottom : 0;
-      const height = frame.value.height - bottomHeight;
+      const height = frame.value.height - bottom;
 
       switch (behavior)  {
         case "height":
@@ -150,10 +153,10 @@ const KeyboardAvoidingView = forwardRef<
           return {};
 
         case "position":
-          return { bottom: bottomHeight };
+          return { bottom };
 
         case "padding":
-          return { paddingBottom: bottomHeight };
+          return { paddingBottom: bottom };
 
         case "translate-with-padding":
           return {

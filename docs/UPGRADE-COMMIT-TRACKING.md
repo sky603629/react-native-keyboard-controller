@@ -34,7 +34,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `50 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `a28dbec565`。下一笔是第 `51 / 155` 笔：`e6679bde41`。
+截至第 `70 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `aff3cbe7d1`。下一笔是第 `71 / 155` 笔：`1d7721b9c7`。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -57,6 +57,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `04da6bf4` | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
 | `376f84d9` | 同步上游 `5ab201112c`：`KeyboardAwareScrollView` 改用 selection caret y 驱动多行输入滚动，加入 `lastSelection`、`clamp` 和 selection debounce；Harmony 原生侧已具备 selection 坐标事件，无需 C++/ETS 修改。 |
 | `d7eba660` | 同步上游 `49979932c7` + `1c03e7b9cf`：新增 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生侧按 Android 策略做 no-op，避免真实拉起键盘。 |
+| `43a0cce2` | 同步上游 `aff3cbe7d1`：`KeyboardAvoidingView enabled=false` 时直接返回空 animated style，完全关闭 `height/position/padding/translate-with-padding` 避让行为。 |
 
 ## Commit 台账
 
@@ -239,8 +240,13 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已分析第 `46 / 155` 笔 iOS 26 `KeyboardExtender` 视觉修复：依赖 UIKit `UIInputView`/`inputAccessoryView`/`UIGlassEffect`，Harmony 当前走 Android 同级 polyfill，无同类原生链路，不同步。
 - 已同步并推送第 `47-48 / 155` 笔 `preload`：JS 增加 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生采用 Android 同策略 no-op，避免真实调用 `showSoftKeyboard()` 拉起键盘。测试确认 `preload()` 调用和默认 `KeyboardProvider` 挂载不会自动弹键盘，事件无异常。
 - 已分析第 `49 / 155` 笔 iOS `swiftformat`，纯 Swift 格式化，Harmony 不同步。
-- 已在测试工程同步第 `50 / 155` 笔 KASV full screen input support：继续把 KASV 滚动核心改为 caret 坐标语义；Harmony 已具备 `selection.end.y`，本轮仅同步 JS，待验证大高度/全屏 TextInput、顶部遮挡、粘贴、多行增长和动态 `bottomOffset`。
+- 已分析并撤销第 `50 / 155` 笔 KASV full screen input support 的测试工程同步：Harmony `selection.end.y` 与 Android/iOS 上游依赖的 caret 局部坐标语义不一致，且缺少可替代读取 TextArea 内 caret 可视 rect / scroll offset 的公开 API；同步该大输入框逻辑会引入滚动异常，因此标记为系统能力缺失不能完全做。
+- 已补充审计第 `51-57 / 155` 笔平台原生变更：`e6679bde41` 是 iOS UITextInput delegate 延后一帧替换，Harmony 无 UIKit delegate 替换/恢复链路；`65586f9726` 是 iOS `KeyboardBackgroundViewCls` Fabric 编译补丁，Harmony 当前 BackgroundView 为 JS fallback，无 native class provider；`d6b93dc2d8` 是 Android `WindowDimensionsListener` reload 后清空引用，Harmony 当前没有 `windowDidResize` 发射链路，且不能扩展到键盘事件 listener；`221b7210ec` 是 Android 避免直接用 `BackgroundStyleApplicator` 内部 API，Harmony JS fallback 只用 RN `View` style；`6971c27ab6` 是 iOS < 12 `userInterfaceStyle` 编译保护，Harmony 无 Swift extension 且 `keyboardAppearance` 已记录不改框架；`8a2bc0814b` 是 iOS native `OverKeyboardView` conditional mount/touch/recycle 修复，Harmony 当前无该原生 overlay 组件；`e736db9971` 是 iOS 键盘 view locator 重构，Harmony 通过 Window avoid area / 键盘事件取高度，不查系统键盘 view hierarchy。
+- 已审计第 `58-59 / 155` 笔 JS/TS 小改：`6c641a556e` 删除 KASV `console.debug`，当前代码仓和测试工程均无该日志；`6d39874aaf` 把 `KeyboardExtenderProps.enabled` 标为可选，当前 `src/types.ts` 已随前序 `KeyboardExtender` 实现对齐并推送。
+- 已补充审计第 `60-69 / 155` 笔平台原生变更：`63d77f8a00` / `3ae5e72d8c` 只修 iOS `KeyboardControllerView.mm` 事件分支和格式；Harmony event emitter 为独立 C++ 方法，无同类 ObjC block 嵌套 crash。`e4e6e6e637` / `003b3c2688` / `b6e3594860` 围绕 iOS 26 `KeyboardTrackingView`、`keyboardLayoutGuide` 和 interactive dismissal，Harmony 当前使用 Window avoid area / 键盘事件和合成帧，不查系统键盘 view，也无真实 interactive 逐帧 API。`93a55c1e96` / `5b0b4c35b1` / `360230ba10` 都是 iOS `KeyboardExtender` 的 `inputAccessoryView` 高度、attach 和玻璃圆角修复，Harmony 当前按 Android 同级 JS polyfill 实现，不存在 `UIInputView` / `reloadInputViews` / `UIGlassEffect` 链路。`af6d19d51d` 是 iOS observer 文件拆分。`c1d18cc677` 是 Android StatusBar/EdgeToEdge registry 竞态，Harmony StatusBarManagerCompat 直接走 Window API，不存在 Android rootView tag 查找竞态。
+- 已在测试工程同步第 `70 / 155` 笔 KAV `enabled=false` 修复：`KeyboardAvoidingView` 的 `useAnimatedStyle` 在 `!enabled` 时直接返回 `{}`，禁用后彻底关闭 `height/position/padding/translate-with-padding` 所有避让样式；测试工程同时恢复 KAV demo 中 `padding` 和 `translate-with-padding` 按钮，便于四种 behavior 回归。
+- 已验证并回写第 `70 / 155` 笔 KAV `enabled=false` 修复：用户确认测试无问题，代码仓同步 `src/components/KeyboardAvoidingView/index.tsx`，功能效果是 `enabled=false` 时完全关闭所有避让行为，而不是仅把部分 offset 置 0。
 
 ## 下一步
 
-当前待测试候选：第 `50 / 155` 笔 `a28dbec565` 已同步测试工程。下一笔主线源码审计是第 `51 / 155` 笔 `e6679bde41`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
+当前无待测试候选。下一笔主线源码审计是第 `71 / 155` 笔 `1d7721b9c7`。第 `91 / 155` 笔 `852fa4a223` 已提前同步，后续走到该位置时只需复核记录和回归。
