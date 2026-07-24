@@ -55,7 +55,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `0b03f32` | 已回退：曾尝试把上游 `331293a9cc` 扩展为 Harmony window keyboard listener 生命周期修复；测试发现会导致键盘事件异常，最终判断 Harmony 无 Android 同类问题，不同步该代码。 |
 | `43f6631e` | 同步上游 `a57fa4b427` + `347fef35c0`：新增 Harmony `KeyboardBackgroundView` JS fallback 与 `KeyboardExtender` Android 同级别 polyfill；实现方式与 Android 一致，和 iOS 原生 accessory / 私有键盘背景材质能力不一致。 |
 | `04da6bf4` | 同步上游 `60ec0ceab8` + `ecb3595085`：`useKeyboardState` 支持 selector；`KeyboardProvider` 移除 JS monkey-patch 深导入依赖，Harmony 保留现有原生 StatusBarManagerCompat 路径。 |
-| `51b3951e` | 同步上游 `5ab201112c`：`KeyboardAwareScrollView` 改用 selection caret y 驱动多行输入滚动，加入 `lastSelection`、`clamp` 和 selection debounce；Harmony 原生侧已具备 selection 坐标事件，无需 C++/ETS 修改。 |
+| `376f84d9` | 同步上游 `5ab201112c`：`KeyboardAwareScrollView` 改用 selection caret y 驱动多行输入滚动，加入 `lastSelection`、`clamp` 和 selection debounce；Harmony 原生侧已具备 selection 坐标事件，无需 C++/ETS 修改。 |
 
 ## Commit 台账
 
