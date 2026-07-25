@@ -17,6 +17,7 @@ import {
   useWindowDimensions,
 } from "../../hooks";
 import { findNodeHandle } from "../../utils/findNodeHandle";
+import useCombinedRef from "../hooks/useCombinedRef";
 
 import { useSmoothKeyboardHandler } from "./useSmoothKeyboardHandler";
 import { debounce, scrollDistanceWithRespectToSnapPoints } from "./utils";
@@ -117,15 +118,7 @@ const KeyboardAwareScrollView = forwardRef<
 
     const { height } = useWindowDimensions();
 
-    const onRef = useCallback((assignedRef: Reanimated.ScrollView) => {
-      if (typeof ref === "function") {
-        ref(assignedRef);
-      } else if (ref) {
-        ref.current = assignedRef;
-      }
-
-      scrollViewAnimatedRef(assignedRef);
-    }, []);
+    const onRef = useCombinedRef(scrollViewAnimatedRef, ref);
     const onScrollViewLayout = useCallback(
       (e: LayoutChangeEvent) => {
         scrollViewTarget.value = findNodeHandle(scrollViewAnimatedRef.current);
