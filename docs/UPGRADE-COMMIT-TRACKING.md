@@ -10,7 +10,7 @@
 
 1. `git status --short`：当前仓可能有未跟踪历史 docs，未确认前不要删除或纳入提交。
 2. `git branch --show-current` / `git remote -v`：当前工作分支应为 `ups`，推送目标是 `origin/ups`。
-3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `115 / 155`；第 `93`、`95 / 155` 已本地提交 `a31f12f8`，第 `96`、`100 / 155` 已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `107 / 155` 是可同步纯 JS refactor；第 `28 / 155`、`75 / 155` 经 RNOH window API 复查判断可实现 `windowDidResize` 但需真机验证；第 `108 / 155` 经测试工程验证确认 Harmony decorator 只能增加拖拽视觉距离，不能增加稳定 scroll range，当前能力缺失不能完全做；第 `109`、`111 / 155` 依赖 108/109 稳定 content inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步；第 `112`、`114-115 / 155` 不需同步；下一笔是第 `116 / 155` `d1fb606b0b`。
+3. 读取 `UPGRADE-SOURCE-COMMIT-CHECKLIST-155.md` 的“当前位置”：当前已分析到第 `120 / 155`；第 `93`、`95 / 155` 已本地提交 `a31f12f8`，第 `96`、`100 / 155` 已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `107 / 155` 是可同步纯 JS refactor；第 `28 / 155`、`75 / 155` 经 RNOH window API 复查判断可实现 `windowDidResize` 但需真机验证；第 `108 / 155` 经测试工程验证确认 Harmony decorator 只能增加拖拽视觉距离，不能增加稳定 scroll range，当前能力缺失不能完全做；第 `109`、`111`、`117`、`119 / 155` 依赖 108/109 稳定 content inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步；第 `112`、`114-116`、`118`、`120 / 155` 不需同步；下一笔是第 `121 / 155` `d4f1a4cf91`。
 4. 查询上游真实 diff：
 
 ```powershell
@@ -39,10 +39,10 @@ git -C $up show --patch --find-renames <hash>
 
 ## 当前关键状态
 
-- 当前待测试候选：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验验证。第 `108 / 155` 的 Harmony 原生 decorator 已在测试工程验证为当前能力缺失不能完全做，不进入主仓；第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-106`、`110`、`112`、`114-115 / 155` 已分析为当前不需同步；第 `107 / 155` 是可同步纯 JS refactor，尚未改代码；第 `109`、`111`、`113 / 155` 暂不同步。
+- 当前待测试候选：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验验证。第 `108 / 155` 的 Harmony 原生 decorator 已在测试工程验证为当前能力缺失不能完全做，不进入主仓；第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 已分析为当前不需同步；第 `107 / 155` 是可同步纯 JS refactor，尚未改代码；第 `109`、`111`、`113`、`117`、`119 / 155` 暂不同步。
 - 最近本地提交：第 `93`、`95 / 155` 已提交为 `a31f12f8 同步 useAnimatedKeyboard 兼容接口`；第 `96`、`100 / 155` 已提交为 `fd5f3e1a 同步 KASV deps 修复和 Provider 类型导出`；第 `101 / 155` 已提交为 `同步 KAV 非 iOS 位移条件`；当前分支仍未推送 `origin/ups`。
 - 最近已验证并回写：第 `76 / 155` `ad76c6ab56` compound `KeyboardToolbar`，以及第 `79 / 155` `692494f11d` `dismiss({ animated })` API 形状；Harmony 的 `animated=false` 当前为接口兼容降级。
-- 下一笔待处理：第 `116 / 155` `d1fb606b0b`。
+- 下一笔待处理：第 `121 / 155` `d4f1a4cf91`。
 - 已提前同步：第 `91 / 155` `852fa4a223`，动态 `bottomOffset` over-scrolling；到第 91 时只需复核，不推进重复实现。
 
 ## 已知不可直接同步 / 易误判点
@@ -51,6 +51,7 @@ git -C $up show --patch --find-renames <hash>
 - `keyboardAppearance`：RNOH 框架未暴露 `keyboardAppearance` native prop，本库不改框架，记录为无可用接口。
 - `windowDidResize`：经复查不应再视为缺原生窗口事件。RNOH 已提供 `WINDOW_SIZE_CHANGE` 生命周期事件；本库可桥接为 `KeyboardController::windowDidResize`，第 `28`、`75` 改为可实现待验证。
 - `ClippingScrollView`：第 `108 / 155` 测试工程验证表明 Harmony `ScrollNode` root padding 只能增加拖拽视觉/弹性距离，不进入 `contentSize`，松手会回弹；`setClip(false)` 又会越界。当前不改 RNOH core 时不能完整支持上游 `contentInset.bottom` 语义。详见 `docs/鸿蒙ClippingScrollView滚动底部空间差异分析.md`。
+- `KeyboardChatScrollView`：第 `117 / 155` 公开 API 依赖 `ScrollViewWithBottomPadding` 和 `ClippingScrollView` 的稳定 bottom/top inset。Harmony 当前第 108/109/111 均不能进入主仓，因此 ChatScrollView 和后续 `extraContentPadding` / `minimumContentPadding` / `blankSpace` 系列暂不能单独同步。
 - `OverKeyboardView`：Harmony 当前没有原生 overlay 组件注册，不补空实现。
 - iOS `KeyboardExtender` 后续多笔 accessory / glass / `keyboardLayoutGuide` 修复：Harmony 当前按 Android 同级 JS polyfill 实现，不具备 iOS 系统级 accessory 语义。
 - Android listener / StatusBar / EdgeToEdge 修复不能泛化套到 Harmony；必须基于 Harmony 实际 API 和复现。
@@ -85,7 +86,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 
 `UPGRADE-COMMIT-ORDER-PLAN.md` 中列出的 `83` 笔是早期关键实施清单，不能作为当前整体升级进度分母；本文后面的 `72` 笔补充审计池也是历史拆分结果，后续只作为审计提示，不作为主清单。
 
-截至第 `115 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `76056c322d`。第 `93`、`95 / 155` 笔已本地提交为 `a31f12f8`；第 `96`、`100 / 155` 笔已本地提交为 `fd5f3e1a`；第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 仍未推送。第 `107 / 155` 是后续可同步的纯 JS refactor；下一笔是第 `116 / 155` 笔：`d1fb606b0b`。
+截至第 `120 / 155` 笔源码相关 commit 已按时间顺序完成证据审计，最后分析的是 `8393ee294f`。第 `93`、`95 / 155` 笔已本地提交为 `a31f12f8`；第 `96`、`100 / 155` 笔已本地提交为 `fd5f3e1a`；第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 仍未推送。第 `107 / 155` 是后续可同步的纯 JS refactor；下一笔是第 `121 / 155` 笔：`d4f1a4cf91`。
 
 补充说明：为修复已验证的动态 `bottomOffset` 过度滚动问题，本轮按用户确认提前同步第 `91 / 155` 笔 `852fa4a223`，但不推进主线顺序游标。
 
@@ -110,7 +111,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 | `d7eba660` | 同步上游 `49979932c7` + `1c03e7b9cf`：新增 `KeyboardController.preload()` 和 `KeyboardProvider preload` 默认调用；Harmony 原生侧按 Android 策略做 no-op，避免真实拉起键盘。 |
 | `08714c47` | 同步上游 `aff3cbe7d1`：`KeyboardAvoidingView enabled=false` 时直接返回空 animated style，完全关闭 `height/position/padding/translate-with-padding` 避让行为。 |
 | 本批最新提交 | 同步上游 `ad76c6ab56` + `692494f11d`：新增 compound `KeyboardToolbar` API；`dismiss` 支持 `{ keepFocus, animated }` 参数形状。Harmony 对 `animated=false` 接口兼容但不能保证系统无动画隐藏。 |
-| 本批待验证 | 第 `28 / 155`、`75 / 155`：可在测试工程桥接 Harmony `WINDOW_SIZE_CHANGE` -> `KeyboardController::windowDidResize` 并同步最终 `useWindowDimensions` 逻辑验证。第 `108 / 155` 已验证当前能力缺失不能完全做，不进入主仓；第 `107 / 155` 仅为 `useCombinedRef` 纯 JS refactor，可后续直接同步并做类型/基础运行验证；第 `109`、`111 / 155` 依赖第 108 稳定 bottom inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步。 |
+| 本批待验证 | 第 `28 / 155`、`75 / 155`：可在测试工程桥接 Harmony `WINDOW_SIZE_CHANGE` -> `KeyboardController::windowDidResize` 并同步最终 `useWindowDimensions` 逻辑验证。第 `108 / 155` 已验证当前能力缺失不能完全做，不进入主仓；第 `107 / 155` 仅为 `useCombinedRef` 纯 JS refactor，可后续直接同步并做类型/基础运行验证；第 `109`、`111`、`117`、`119 / 155` 依赖第 108 稳定 bottom/top inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步。 |
 
 ## Commit 台账
 
@@ -315,7 +316,8 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" rev-list --count 1.
 - 已分析并同步第 `101-105 / 155` 笔中的可做项：第 101 `b5fb83596c` 是纯 JS KAV 条件翻转，从 `OS === "android"` 改为 `OS !== "ios"`。按平台语义优先级复核，Harmony 不能走 iOS 的起始帧目标值语义，因为当前没有 iOS `KeyboardTrackingView` / `keyboardLayoutGuide` / UIKit 协同 layout animation；Harmony C++ 合成 `onMove` 帧，更接近 Android/非 iOS 的逐帧更新，所以已同步主仓 `src/components/KeyboardAvoidingView/hooks.ts`。用户确认该纯 JS 条件修复无需单独测试，直接提交主仓。第 102 `838f546c48` 是 Android `OverKeyboardRootViewGroup.onInterceptHoverEvent` super 调用修复，Harmony 当前无 `OverKeyboardView` 原生 overlay/hover intercept 链路，不同步；第 103 `91df02ecd4` 是 iOS hybrid app 中 `KeyboardTrackingView` 挂载 top controller 修复，Harmony 无 UIKit controller/tracking view 链路，不同步；第 104 `68395bf201` 是 Android/iOS Fabric codegen 名继续缩短到 `RNKC` 和 Windows CI，Harmony 手写 C++ 注册且第 99 已不改 codegen name，不同步；第 105 `8041105fea` 是 iOS 手动 did 事件方案，Harmony 已基于 ArkTS will/did 和 keyboardHeightChange 发事件，无 iOS `KeyboardMovementObserver`/`CADisplayLink` 链路，不同步。
 - 已分析第 `106-110 / 155` 笔，并专项验证第 108 的 Harmony decorator：第 106 `3589930ca5` 是 Android RN 0.70 编译兼容，把 `ThemedReactContext.keepShadowNodesInSync()` 内直接 `emitDeviceEvent` 改为库内 `emitEvent` extension；Harmony 没有 Android `ThemedReactContext` / `keepShadowNodesInSync` / `onUserDrivenAnimationEnded` 链路，ETS 侧 `ctx.rnInstance.emitDeviceEvent` 属于 RNOH TS API，不同步。第 107 `a0d49aeb7a` 新增 `useCombinedRef` 并清理 KASV 内联 ref callback，是可同步纯 JS refactor，不新增接口也不涉及此前不支持的 `assureFocusedInputVisible()`。第 108 `36abe0b8b3` 新增 Android `ClippingScrollViewDecoratorView`，测试工程已按 Harmony native decorator 路线验证：`setClip(false)` 会越界；`clip=true + setPadding(bottom)` 能看到拖拽底部空白，但 `contentSize` 不增加，松手回弹到真实 max offset；给最后 child 加 margin 又不生效。因此当前不改 RNOH core 时不能完整支持上游稳定 bottom inset。第 109 `167a000a9c` 新增 `ScrollViewWithBottomPadding`，依赖第 108 的稳定 `contentInsetBottom`，暂不同步。第 110 `ebc5205903` 是 iOS 26 `KeyboardGestureArea` + `InvisibleAccessoryView` detach 期间 KVO 误发 interactive 的过滤，Harmony 无 `KeyboardEventsIgnorer` / `InvisibleAccessoryView` / `KeyboardTrackingView.interactive` 链路，不同步。
 - 已分析第 `111-115 / 155` 笔：第 111 `423dbef67c` 把 `KeyboardAwareScrollView` 从底部假 padding view 切到 `ScrollViewWithBottomPadding` / `contentInset` 路线，并新增 `useScrollState`、`ghostViewSpace`、`removeGhostPadding`；该路线强依赖第 108/109 稳定 bottom inset，而 Harmony 第 108 已实测 root padding 不进入 `contentSize`、松手回弹，因此暂不同步，继续保留当前已验证的 padding view 路线。第 112 `5ef74d9365` 仅重跑 SwiftFormat，不同步。第 113 `ac7dee1c27` 由 iOS focus 后下一帧补发 selection 与 JS `pendingSelectionForFocus` 组成，修的是上游新 KASV 在 focus `onStart` 中使用 stale `lastSelection` 的问题；当前 Harmony 已撤销第 94 公共 ref/command 能力，KASV focus 时仍使用 `input.value` 全输入框布局兜底，不会读取 stale selection；且 Harmony focus 后当前 selection/caret 坐标仍未稳定证明可用，因此暂不同步，后续若重新评估需先做 native 延后一帧 caret 读取试验。第 114 `6c25251470` 是 iOS `KeyboardMovementObserver` manual did / interactive dismissal 调度修复，依赖 UIKit `KeyboardTrackingView`、`KeyboardEventsIgnorer`、`KeyboardAreaExtender` 和 `inputAccessoryView.reloadInputViews()`，Harmony 无同类链路，不同步。第 115 `76056c322d` 修第 94 引入的 `assureFocusedInputVisible()` ref identity 问题；Harmony 当前不导出该 ref 接口，主仓 KASV 无 `useImperativeHandle`，不存在该问题，不同步。
+- 已分析第 `116-120 / 155` 笔：第 116 `d1fb606b0b` 是上游 plain RN `Animated` 版 `KeyboardStickyView` 的 Fabric enabled=false graph 修复，Harmony 当前仍保留已验证的 Reanimated 版本，不存在 RN Animated graph 断链问题，不同步。第 117 `11c0dbfba8` 新增公开 `KeyboardChatScrollView`、`useChatKeyboard`、`contentInsetTop`、inverted/behavior/freeze/offset 等逻辑；设计前提是不改布局而扩展 scroll range，iOS 依赖 `contentInset`，Android 依赖 `ClippingScrollViewDecorator`。Harmony 第 108/109/111 均不能稳定支持 content inset，因此暂不同步该 public API。第 118 `a096e393fd` 为 iOS contentInset 路线新增真实 `ClippingScrollView` 并把 `UIScrollView.scrollRectToVisible` swizzle 成 no-op，Harmony 无 UIKit/RCTScrollView 方法且未进入 contentInset 路线，不同步。第 119 `83e34b7069` 给 `KeyboardChatScrollView` 增加 `extraContentPadding` SharedValue 和 `useExtraContentPadding`，依赖第 117/ScrollViewWithBottomPadding，暂不同步。第 120 `8393ee294f` 只修 Android `WindowDimensionListener` listener/content 引用清理；Harmony 当前尚未实现 windowDidResize bridge，无直接同步点，但后续做第 28/75 时必须保存真实 listener/window/content 引用并用同一引用解除订阅。
 
 ## 下一步
 
-从第 `116 / 155` 笔 `d1fb606b0b` 继续按 5 笔一批分析；若用户要求先同步可做项，可同步第 `107 / 155` 的 `useCombinedRef`。第 `108 / 155` / `109 / 155` / `111 / 155` 当前不进入主仓，除非后续 RNOH ScrollView 暴露稳定 content inset / content container padding 能力。
+从第 `121 / 155` 笔 `d4f1a4cf91` 继续按 5 笔一批分析；若用户要求先同步可做项，可同步第 `107 / 155` 的 `useCombinedRef`。第 `108 / 155` / `109 / 155` / `111 / 155` / `117 / 155` / `119 / 155` 当前不进入主仓，除非后续 RNOH ScrollView 暴露稳定 content inset / content container padding 能力。
