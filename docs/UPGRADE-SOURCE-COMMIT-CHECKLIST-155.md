@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已分析到第 `120 / 155` 笔 `8393ee294f`；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 当前不需同步；第 `107 / 155` 是纯 JS refactor，可后续直接同步；第 `28 / 155`、`75 / 155` 经 RNOH window API 复查后判断可实现 `windowDidResize` 事件但需真机验证；第 `108 / 155` 经测试工程验证确认 Harmony decorator 只能增加拖拽视觉距离，不能增加稳定 scroll range，当前能力缺失不能完全做；第 `109`、`111`、`117`、`119 / 155` 依赖 108/109 稳定 content inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前 Harmony KASV 未进入该链路且 selection/caret 能力仍不稳定，暂不同步；下一笔待分析是第 `121 / 155` 笔 `d4f1a4cf91`。
+- 当前指针：已分析到第 `125 / 155` 笔 `eb2dfbbe35`；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交；当前分支相对 `origin/ups` 尚未推送；第 `94 / 155` 因 Harmony selection/caret 坐标能力限制暂不同步；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 当前不需同步；第 `107 / 155` 是纯 JS refactor，可后续直接同步；第 `28 / 155`、`75 / 155` 经 RNOH window API 复查后判断可实现 `windowDidResize` 事件但需真机验证；第 `108 / 155` 经测试工程验证确认 Harmony decorator 只能增加拖拽视觉距离，不能增加稳定 scroll range，当前能力缺失不能完全做；第 `109`、`111`、`117`、`119`、`121`、`122 / 155` 依赖 108/109 稳定 content inset 或未暴露的 `KeyboardChatScrollView`，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前 Harmony KASV 未进入该链路且 selection/caret 能力仍不稳定，暂不同步；第 `123`、`125 / 155` 的 `KeyboardAvoidingView automaticOffset` / `viewPositionInWindow` 在 Harmony 有真实原生承接路径，但需先进入测试工程验证；下一笔待分析是第 `126 / 155` 笔 `6872736017`。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -72,31 +72,31 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `120 / 155` 笔按时间顺序完成证据审计；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交，当前均尚未推送；第 `94 / 155` 暂不同步；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 当前不需同步；第 `107 / 155` 可后续同步；第 `28 / 155`、`75 / 155` 可实现但需真机验证；第 `108 / 155` 经测试工程验证后确认当前能力缺失不能完全做；第 `109`、`111`、`113`、`117`、`119 / 155` 暂不同步：
+截至第 `125 / 155` 笔按时间顺序完成证据审计；第 `93`、`95 / 155` 笔已本地提交 `a31f12f8`，第 `96`、`100 / 155` 笔已本地提交 `fd5f3e1a`，第 `101 / 155` 已本地提交，当前均尚未推送；第 `94 / 155` 暂不同步；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 当前不需同步；第 `107`、`124 / 155` 可后续同步；第 `28`、`75`、`123`、`125 / 155` 可实现但需真机验证；第 `108 / 155` 经测试工程验证后确认当前能力缺失不能完全做；第 `109`、`111`、`113`、`117`、`119`、`121`、`122 / 155` 暂不同步：
 
 | 指标 | 数量 |
 | --- | ---: |
 | 总源码相关 commit | 155 |
-| 已按顺序处理到 | 120 |
-| 当前进度 | 77.4% |
+| 已按顺序处理到 | 125 |
+| 当前进度 | 80.6% |
 | 已代码同步并推送 | 27 |
 | 本地已提交未推送 | 5 |
 | 已分析-待测试 | 0 |
 | 测试工程已同步 | 0 |
-| 已分析-可同步 | 1 |
-| 已分析-可实现待验证 | 2 |
+| 已分析-可同步 | 2 |
+| 已分析-可实现待验证 | 4 |
 | 已分析-不需同步 | 76 |
-| 已分析-暂不同步 | 7 |
+| 已分析-暂不同步 | 9 |
 | 因系统能力缺失不能完全做 | 2 |
-| 未分析 | 35 |
+| 未分析 | 30 |
 | 其中提前同步 | 1 |
 
 当前位置：
 
-- 最后一笔已分析：`120` / `155`，`8393ee294f`
-- 下一笔待处理：`121` / `155`，`d4f1a4cf91`
+- 最后一笔已分析：`125` / `155`，`eb2dfbbe35`
+- 下一笔待处理：`126` / `155`，`6872736017`
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
-- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验验证；第 `108 / 155` 已在测试工程验证为当前能力缺失不能完全做，不进入主仓；第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 不纳入同步；第 `107 / 155` 后续可直接同步；第 `109`、`111`、`117`、`119 / 155` 因依赖第 108 稳定 bottom inset，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步。
+- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验验证；第 `123 / 155`、`125 / 155` 可做 `KeyboardAvoidingView automaticOffset` + `viewPositionInWindow` 测试工程验证；第 `108 / 155` 已在测试工程验证为当前能力缺失不能完全做，不进入主仓；第 `101 / 155` 已按用户确认无需测试直接同步到主仓；第 `102-106`、`110`、`112`、`114-116`、`118`、`120 / 155` 不纳入同步；第 `107`、`124 / 155` 后续可直接同步或随 KAV 测试链合并；第 `109`、`111`、`117`、`119`、`121`、`122 / 155` 因依赖第 108 稳定 bottom inset / `KeyboardChatScrollView`，暂不同步；第 `113 / 155` 依赖上游新 KASV selection-on-focus 链路，当前暂不同步。
 
 ## 状态说明
 
@@ -237,11 +237,11 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 118 | `a096e393fd` | 2026-03-04 | JS/TS+Android+iOS | fix: noop `scrollRectToVisible` on iOS (#1336) | 已分析-不需同步 | 上游为第 `111 / 155` 的 contentInset KASV 路线补 iOS 原生 decorator：让 `ClippingScrollView` 在 iOS 也变成真实 native view，运行时查找内部 `UIScrollView` 并把 `scrollRectToVisible:animated:` 替换为 no-op，避免 UIKit 因 `contentInset.bottom` 认为输入框不可见而自行滚动。同时补 Android/iOS Fabric shadow node/codegen。Harmony 当前没有同步第 108/109/111 的 `ClippingScrollView` / contentInset 路线，也没有 UIKit `UIScrollView.scrollRectToVisible` / ObjC runtime subclass 机制；不需要同步。若未来 Harmony 走稳定 contentInset 路线，应基于 ArkUI/RNOH ScrollView 是否存在自动输入框避让滚动另行验证，而不是套 iOS no-op。 |
 | 119 | `83e34b7069` | 2026-03-05 | JS/TS | feat: `extraContentPadding` prop (#1332) | 已分析-暂不同步 | 上游给第 `117 / 155` 的 `KeyboardChatScrollView` 增加 `extraContentPadding?: SharedValue<number>`，并新增 `useExtraContentPadding`：外部输入框增高等场景可额外扩展 scroll range，同时按 `keyboardLiftBehavior` 调整 scroll position；底层仍通过 `ScrollViewWithBottomPadding` 把 keyboard padding 与 extra padding 相加后写入 iOS `contentInset` / Android `contentInsetBottom/Top`。当前 Harmony 未同步 `KeyboardChatScrollView`，也没有稳定 `ScrollViewWithBottomPadding`；因此本提交不能单独同步。 |
 | 120 | `8393ee294f` | 2026-03-05 | Android | fix: memory leak on Android (#1343) | 已分析-不需同步 | 上游只修 Android `WindowDimensionListener`：保存 `attachedContent`，detach 时从同一个 content 的 `viewTreeObserver` 移除同一个 `layoutListener`，然后清空引用，降低 Activity restart 后的泄漏风险。Harmony 当前还没有实现第 `28 / 155`、`75 / 155` 对应的 `windowDidResize` bridge，也没有 Android `ViewTreeObserver.OnGlobalLayoutListener`；所以本提交当前无代码同步点。后续若在 Harmony 测试工程桥接 `WINDOW_SIZE_CHANGE` / window resize listener，需要吸收本提交原则：保存真实 listener/window/content 引用并在关闭观察器时用同一引用解除订阅，避免 reload/restart 泄漏。 |
-| 121 | `d4f1a4cf91` | 2026-03-07 | JS/TS | fix: access before initialization error (#1342) | 未分析 | |
-| 122 | `7f32767709` | 2026-03-10 | JS/TS+Android+iOS | feat: `minimumContentPadding` prop on `KeyboardChatScrollView` (#1344) | 未分析 | |
-| 123 | `66e62784c3` | 2026-03-11 | JS/TS | fix: add `automaticOffset` prop for correct KAV positioning in modals (#1346) | 未分析 | |
-| 124 | `f5dca3cdf9` | 2026-03-11 | JS/TS | fix: `KeyboardAvoidingView` types union (#1354) | 未分析 | |
-| 125 | `eb2dfbbe35` | 2026-03-12 | JS/TS+Android+iOS | fix: handle broken measureInWindow (#1355) | 未分析 | |
+| 121 | `d4f1a4cf91` | 2026-03-07 | JS/TS | fix: access before initialization error (#1342) | 已分析-暂不同步 | 上游只把 `KeyboardChatScrollView/useChatKeyboard/helpers.ts` 中的多个 `export function` 改成 `export const ... = (...) =>`，规避 Metro / worklet 打包时 `Cannot access 'clampedScrollTarget' before initialization` 的初始化顺序问题；行为本身不变。Harmony 当前没有同步第 `117 / 155` 的 `KeyboardChatScrollView` / `useChatKeyboard`，也没有稳定 content inset 底座，因此没有可落地文件；等后续真正恢复 ChatScrollView 链路时需一并吸收该 helper 形态，不能单独同步到当前主仓。 |
+| 122 | `7f32767709` | 2026-03-10 | JS/TS+Android+iOS | feat: `minimumContentPadding` prop on `KeyboardChatScrollView` (#1344) | 已分析-暂不同步 | 上游给 `KeyboardChatScrollView` 增加 `minimumContentPadding`，并让 `ScrollViewWithBottomPadding` 分离 `bottomPadding` 与 `scrollIndicatorPadding`，同时给 iOS `ClippingScrollViewDecorator` 增加 `applyWorkaroundForContentInsetHitTestBug` hitTest 修复、Android 增加同名 no-op setter。核心效果是用 `max(minimumContentPadding, keyboardPadding + extraContentPadding)` 增加真实 scroll range，让 AI chat 最新消息能被推到顶部。Harmony 当前第 `108/109/111/117/119` 的 contentInset / ChatScrollView 链路均暂不同步，ArkUI root padding 实测只提供拖拽视觉空间且松手回弹；因此本提交不能单独同步，后续若 RNOH ScrollView 提供稳定 content inset 能力，需要把 `minimumContentPadding` 与 hitTest/indicator inset 策略一起重评。 |
+| 123 | `66e62784c3` | 2026-03-11 | JS/TS | fix: add `automaticOffset` prop for correct KAV positioning in modals (#1346) | 已分析-可实现待验证 | 上游给 `KeyboardAvoidingView` 新增公开 `automaticOffset?: boolean`，默认 `false` 保持兼容；开启后不再只信 `onLayout` 的父级相对 `y`，而是读取 view 在窗口中的绝对坐标，用于 iOS pageSheet/modal/header 等场景，`keyboardVerticalOffset` 变成额外补偿值。第 `123` 最初用 RN `measureInWindow`，但第 `125` 随即证明 RN 测量在 Fabric modal / Android edge-to-edge 不可靠，因此 Harmony 不应只同步第 123 的 JS。Harmony 现有 C++ 已在 `syncUpLayout()` 中使用 ArkUI `OH_ArkUI_NodeUtils_GetLayoutPositionInWindow` 读取窗口坐标，有真实底层能力；建议与第 `125` 合并进测试工程，验证普通页面、modal/弹窗、`padding/height/position/translate-with-padding` 四种 behavior。 |
+| 124 | `f5dca3cdf9` | 2026-03-11 | JS/TS | fix: `KeyboardAvoidingView` types union (#1354) | 已分析-可同步 | 上游移除 `KeyboardAvoidingViewProps` 的 discriminated union，允许 `behavior` 为 `"height" | "padding" | "position" | "translate-with-padding"`，并让 `contentContainerStyle?: ViewProps["style"]` 不再因 TS 无法缩窄而报错；运行时代码几乎不变，仍只有 `position` 行为使用 `contentContainerStyle`。这是纯 TS 易用性修复，可同步；但上游当前类型基于第 `123` 已含 `automaticOffset`，实际落地最好随第 `123/125` KAV 链路一起同步，避免文档/类型和实现分叉。 |
+| 125 | `eb2dfbbe35` | 2026-03-12 | JS/TS+Android+iOS | fix: handle broken measureInWindow (#1355) | 已分析-可实现待验证 | 上游新增内部 native `KeyboardControllerNative.viewPositionInWindow(viewTag): Promise<{x,y,width,height}>`，`KeyboardAvoidingView automaticOffset` 改用 `findNodeHandle(internalRef.current)` + native 测量，失败时回退 `onLayout`；Android 通过 `uiManager.resolveView(tag)` + `screenLocation`，iOS 通过 active window / `viewForReactTag` 获取绝对窗口 frame。Harmony 当前 `src/types.ts`、`src/specs/NativeKeyboardController.ts`、`src/bindings.ts`、ETS `RNKeyboardControllerTurboModule.ts`、C++ `RNKeyboardController.cpp` 均未暴露该接口；但 RNOH C++ 可通过 `RNInstanceCAPI::findComponentInstanceByTag(tag)` 找到 `ComponentInstance`，再用 `getLocalRootArkUINode().getArkUINodeHandle()` + `OH_ArkUI_NodeUtils_GetLayoutPositionInWindow` / `GetLayoutSize` 读窗口坐标，并按 `pointScaleFactor` 转 vp。结论是可实现但必须先测试工程验证：该方法不应在 ArkTS 里伪造 0 值，也不能依赖 RN `measureInWindow`；需确认 TurboModule 异步 Promise、主线程访问 registry、组件销毁时 reject/fallback 三个细节。 |
 | 126 | `6872736017` | 2026-03-12 | JS/TS | fix: automatically detect top border of `KeyboardAwareScrollView` (#1352) | 未分析 | |
 | 127 | `4a32305f7e` | 2026-03-13 | JS/TS+Android+iOS | feat: `KeyboardToolbar.Group` (#881) | 未分析 | |
 | 128 | `0bb348ace6` | 2026-03-14 | JS/TS | refactor: rename `minimumContentPadding` to `blankSpace` (#1359) | 未分析 | |
