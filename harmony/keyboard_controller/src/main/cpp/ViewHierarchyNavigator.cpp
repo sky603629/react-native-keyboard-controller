@@ -26,25 +26,60 @@
  */
 
 #include "ViewHierarchyNavigator.h"
-#include <glog/logging.h>
-#include <algorithm>
 
 namespace rnoh {
+
+namespace {
+const char *kToolbarGroupName = "KeyboardToolbarGroupView";
+}
+
+bool ViewHierarchyNavigator::isToolbarGroupComponent(
+    ComponentInstance::Shared component) {
+    return component && component->getComponentName() == kToolbarGroupName;
+}
+
+ComponentInstance::Shared ViewHierarchyNavigator::findGroupAncestor(
+    ComponentInstance::Shared component) {
+    if (!component) {
+        return nullptr;
+    }
+    auto parent = component->getParent().lock();
+    while (parent) {
+        if (isToolbarGroupComponent(parent)) {
+            return parent;
+        }
+        parent = parent->getParent().lock();
+    }
+    return nullptr;
+}
+
 TextInputComponentInstance::Shared ViewHierarchyNavigator::setFocusTo(
     const std::string& direction, ComponentInstance::Shared currentFocus) {
     if (!currentFocus) {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - currentFocus is null";
         return nullptr;
     }
-    DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo direction=" << direction
-        << " currentFocus->getTag(): " << currentFocus->getTag();
-    auto textInput = findTextInputInDirection(currentFocus, direction);
-    if (textInput) {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - found target input";
-    } else {
-        DLOG(INFO) << "ViewHierarchyNavigator::setFocusTo - no target input found";
+    return findTextInputInDirection(
+        currentFocus,
+        direction == "next" ? 1 : -1);
+}
+
+void ViewHierarchyNavigator::collectInputFields(
+    ComponentInstance::Shared component,
+    std::vector<TextInputComponentInstance::Shared>& out,
+    bool skipGroups) {
+    if (!component) {
+        return;
     }
-    return textInput;
+    if (auto textInput = isValidTextInput(component)) {
+        out.push_back(textInput);
+        return;
+    }
+    if (skipGroups && isToolbarGroupComponent(component)) {
+        return;
+    }
+    for (const auto& child : component->getChildren()) {
+        collectInputFields(child, out, skipGroups);
+    }
 }
 
 std::vector<TextInputComponentInstance::Shared> ViewHierarchyNavigator::getAllInputFields(
@@ -53,35 +88,24 @@ std::vector<TextInputComponentInstance::Shared> ViewHierarchyNavigator::getAllIn
     if (!rootComponent) {
         return textInputs;
     }
-    // 递归查找所有输入框
-    std::function<void(ComponentInstance::Shared)> findTextInputs = 
-        [&textInputs, &findTextInputs](ComponentInstance::Shared component) {
-            if (!component) return;
-            auto textInput = isValidTextInput(component);
-            if (textInput) {
-                textInputs.push_back(textInput);
-            } else {
-                // 递归查找子组件
-                const auto& children = component->getChildren();
-                for (const auto& child : children) {
-                    findTextInputs(child);
-                }
-            }
-        };
-    findTextInputs(rootComponent);
+    if (isToolbarGroupComponent(rootComponent)) {
+        for (const auto& child : rootComponent->getChildren()) {
+            collectInputFields(child, textInputs, true);
+        }
+    } else {
+        collectInputFields(rootComponent, textInputs, true);
+    }
     return textInputs;
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirection(
-    ComponentInstance::Shared currentFocus, const std::string& direction) {
+    ComponentInstance::Shared currentFocus, int direction) {
     if (!currentFocus) {
         return nullptr;
     }
-    DLOG(INFO) << "jjtest currentFocus.name" << currentFocus->getComponentName();
     // 获取父组件
     auto parentComponent = currentFocus->getParent().lock();
     if (!parentComponent) {
-        DLOG(INFO) << "jjtest ViewHierarchyNavigator - no parent found";
         return nullptr;
     }
     // 获取父组件的所有子组件
@@ -94,14 +118,11 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
             break;
         }
     }
-    if (currentIndex == -1) {
-        DLOG(INFO) << "ViewHierarchyNavigator - current focus not found in parent's children";
+    if (currentIndex < 0) {
         return nullptr;
     }
-    DLOG(INFO) << "ViewHierarchyNavigator - currentIndex=" << currentIndex
-        << " siblings.size()=" << siblings.size();
     // 根据方向确定遍历范围
-    if (direction == "next") {
+    if (direction > 0) {
         // 向后遍历：从 currentIndex+1 到末尾
         for (size_t i = currentIndex + 1; i < siblings.size(); ++i) {
             auto result = findTextInputOrGoDeeper(siblings[i], direction);
@@ -118,18 +139,21 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInDirect
             }
         }
     }
+    // Group 是导航边界，组内焦点不能跳转到组外输入框
+    if (isToolbarGroupComponent(parentComponent)) {
+        return nullptr;
+    }
     // 如果同级没找到，递归到父级继续查找
-    DLOG(INFO) << "ViewHierarchyNavigator - searching in parent's parent";
     return findTextInputInDirection(parentComponent, direction);
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInHierarchy(
-    ComponentInstance::Shared component, const std::string& direction) {
-    if (!component) {
+    ComponentInstance::Shared component, int direction) {
+    if (!component || isToolbarGroupComponent(component)) {
         return nullptr;
     }
     const auto& children = component->getChildren();
-    if (direction == "next") {
+    if (direction > 0) {
         // 正序遍历
         for (const auto& child : children) {
             auto result = findTextInputOrGoDeeper(child, direction);
@@ -150,8 +174,8 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputInHierar
 }
 
 TextInputComponentInstance::Shared ViewHierarchyNavigator::findTextInputOrGoDeeper(
-    ComponentInstance::Shared child, const std::string& direction) {
-    if (!child) {
+    ComponentInstance::Shared child, int direction) {
+    if (!child || isToolbarGroupComponent(child)) {
         return nullptr;
     }
     // 首先检查当前组件是否是有效输入框
@@ -175,9 +199,6 @@ TextInputComponentInstance::Shared ViewHierarchyNavigator::isValidTextInput(
         // 尝试转换为 TextInputComponentInstance
         auto textInput = std::dynamic_pointer_cast<TextInputComponentInstance>(component);
         if (textInput) {
-            // TODO: 可以在这里添加 enabled 状态检查
-            // 类似于 iOS 的 textField.isEnabled 或 textView.isEditable
-            DLOG(INFO) << "ViewHierarchyNavigator - found valid TextInput: " << name;
             return textInput;
         }
     }

@@ -118,6 +118,7 @@ export type OverKeyboardViewProps = PropsWithChildren<{
   visible: boolean;
 }>;
 export type KeyboardBackgroundViewProps = PropsWithChildren<ViewProps>;
+export type KeyboardToolbarGroupViewProps = PropsWithChildren<ViewProps>;
 export type KeyboardExtenderProps = PropsWithChildren<{
   /** Controls whether this `KeyboardExtender` instance should take effect. Default is `true`. */
   enabled?: boolean;

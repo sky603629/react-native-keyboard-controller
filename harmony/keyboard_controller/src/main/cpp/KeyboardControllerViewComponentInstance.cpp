@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cmath>
 #include <folly/dynamic.h>
+#include <functional>
 #include <iostream>
 #include <arkui/native_interface_focus.h>
 #include "react/renderer/components/textinput/TextInputProps.h"
@@ -429,20 +430,27 @@ bool KeyboardControllerViewComponentInstance::readCaretOffset(
 
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
-    int currentIndex = -1;
-    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
+    auto focused = this->findFocusedTextInput();
+    if (!focused || !this->enabled) {
+        this->textInputVector.clear();
+        return;
+    }
+    auto groupAncestor = ViewHierarchyNavigator::findGroupAncestor(focused);
+    ComponentInstance::Shared scanRoot =
+        groupAncestor ? groupAncestor : this->shared_from_this();
+    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(scanRoot);
     int count = static_cast<int>(this->textInputVector.size());
+    int currentIndex = -1;
     for (size_t i = 0; i < this->textInputVector.size(); ++i) {
         auto& input = this->textInputVector[i];
-        ArkUINode& node = input->getLocalRootArkUINode();
-        if (node.isFocused()) {
+        if (input && input->getTag() == focused->getTag()) {
            currentIndex = static_cast<int>(i);
            break;
         }
     }
     this->textInputVector.clear();
-   // 发送 focusDidSet 事件到 JS 层
-    if (currentIndex >= 0 && this->enabled) {
+    // 发送 focusDidSet 事件到 JS 层
+    if (currentIndex >= 0) {
        auto rnInstancePtr = this->m_deps->rnInstance.lock();
        if (rnInstancePtr != nullptr) {
            folly::dynamic payload = folly::dynamic::object
@@ -479,17 +487,7 @@ void KeyboardControllerViewComponentInstance::onBlur() {
  * @param direction "next" | "prev"
  */
 void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& direction) {
-    // 确定当前焦点组件
-    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
-    ComponentInstance::Shared currentFocus = nullptr;
-    for (size_t i = 0; i < this->textInputVector.size(); ++i) {
-        auto& input = this->textInputVector[i];
-        ArkUINode& node = input->getLocalRootArkUINode();
-        if (node.isFocused()) {
-           currentFocus = input;
-           break;
-        }
-    }
+    auto currentFocus = this->findFocusedTextInput();
     if (!currentFocus) {
         DLOG(INFO) << "no current focus available";
         return;
@@ -527,14 +525,24 @@ void KeyboardControllerViewComponentInstance::setFocusTo(const std::string& dire
 }
 
 TextInputComponentInstance::Shared KeyboardControllerViewComponentInstance::findFocusedTextInput() {
-    auto allInputs = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
-    for (auto &input : allInputs) {
-        ArkUINode &node = input->getLocalRootArkUINode();
-        if (node.isFocused()) {
-            return input;
+    std::function<TextInputComponentInstance::Shared(ComponentInstance::Shared)> findFocused;
+    findFocused = [&](ComponentInstance::Shared component) -> TextInputComponentInstance::Shared {
+        if (!component) {
+            return nullptr;
         }
-    }
-    return nullptr;
+        if (auto input = std::dynamic_pointer_cast<TextInputComponentInstance>(component)) {
+            if (input->getLocalRootArkUINode().isFocused()) {
+                return input;
+            }
+        }
+        for (const auto& child : component->getChildren()) {
+            if (auto input = findFocused(child)) {
+                return input;
+            }
+        }
+        return nullptr;
+    };
+    return findFocused(this->shared_from_this());
 }
 
 int KeyboardControllerViewComponentInstance::findParentScrollViewTarget(ComponentInstance::Shared const &input) {

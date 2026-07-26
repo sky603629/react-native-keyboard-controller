@@ -64,7 +64,20 @@ public:
         ComponentInstance::Shared rootComponent
     );
 
+    /**
+     * 查找距离当前组件最近的 KeyboardToolbar.Group 祖先
+     * @param component 当前组件
+     * @return 最近的 Group 祖先，不在 Group 内时返回 nullptr
+     */
+    static ComponentInstance::Shared findGroupAncestor(
+        ComponentInstance::Shared component
+    );
+
 private:
+    static bool isToolbarGroupComponent(
+        ComponentInstance::Shared component
+    );
+
     /**
      * 根据方向查找输入框
      * @param currentFocus 当前焦点组件
@@ -73,7 +86,7 @@ private:
      */
     static TextInputComponentInstance::Shared findTextInputInDirection(
         ComponentInstance::Shared currentFocus,
-        const std::string& direction
+        int direction
     );
 
     /**
@@ -84,7 +97,7 @@ private:
      */
     static TextInputComponentInstance::Shared findTextInputInHierarchy(
         ComponentInstance::Shared component,
-        const std::string& direction
+        int direction
     );
 
     /**
@@ -95,7 +108,7 @@ private:
      */
     static TextInputComponentInstance::Shared findTextInputOrGoDeeper(
         ComponentInstance::Shared child,
-        const std::string& direction
+        int direction
     );
 
     /**
@@ -105,6 +118,12 @@ private:
      */
     static TextInputComponentInstance::Shared isValidTextInput(
         ComponentInstance::Shared component
+    );
+
+    static void collectInputFields(
+        ComponentInstance::Shared component,
+        std::vector<TextInputComponentInstance::Shared>& out,
+        bool skipGroups
     );
 };
 

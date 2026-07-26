@@ -9,6 +9,7 @@ import type {
   KeyboardEventsModule,
   KeyboardExtenderProps,
   KeyboardGestureAreaProps,
+  KeyboardToolbarGroupViewProps,
   OverKeyboardViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
@@ -60,3 +61,8 @@ export const KeyboardBackgroundView = React.forwardRef<
 });
 export const RCTKeyboardExtender =
   View as unknown as React.FC<KeyboardExtenderProps>;
+/**
+ * A View that defines a group of `TextInput`s for toolbar navigation.
+ */
+export const RCTKeyboardToolbarGroupView =
+  View as unknown as React.FC<KeyboardToolbarGroupViewProps>;

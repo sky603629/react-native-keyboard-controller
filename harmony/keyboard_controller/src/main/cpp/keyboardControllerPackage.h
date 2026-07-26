@@ -32,6 +32,7 @@
 #define KEYBOARDCONTROLLERPACKAGE_H
 
 #include "KeyboardGestureAreaComponentInstance.h"
+#include "KeyboardToolbarGroupViewComponentInstance.h"
 #include "RNOH/Package.h"
 #include "RNKeyboardController.h"
 #include "RNStatusBarManagerCompat.h"
@@ -43,8 +44,11 @@ namespace rnoh {
             if (ctx.componentName == "RNKeyboardControllerView") {
                 return std::make_shared<KeyboardControllerViewComponentInstance>(ctx);
             }
-         if (ctx.componentName == "RNKeyboardGestureArea") {
+            if (ctx.componentName == "RNKeyboardGestureArea") {
                 return std::make_shared<KeyboardGestureAreaComponentInstance>(ctx);
+            }
+            if (ctx.componentName == "KeyboardToolbarGroupView") {
+                return std::make_shared<KeyboardToolbarGroupViewComponentInstance>(ctx);
             }
             return nullptr;
         }
