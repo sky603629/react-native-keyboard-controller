@@ -156,7 +156,7 @@ export const KeyboardProvider = ({
         "worklet";
 
         broadcastKeyboardEvents("onStart", event);
-        updateSharedValues(event, ["ios"]);
+        updateSharedValues(event, ["ios", "harmony"]);
       },
       onKeyboardMove: (event: NativeEvent) => {
         "worklet";
