@@ -67,14 +67,14 @@ public:
     struct InputLayoutEvent {
         int parentScrollViewTarget;
         int target;
-        struct layout {
+        struct Layout {
             double absoluteX;
             double absoluteY;
             double x;
             double y;
             double width;
             double height;
-        };
+        } layout;
     };
     struct TextChangeEvent {
         std::string text;

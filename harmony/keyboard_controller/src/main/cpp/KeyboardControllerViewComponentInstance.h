@@ -40,8 +40,32 @@
 #include "RNOH/arkui/TextInputNode.h"
 #include "RNOH/arkui/TextAreaNode.h"
 #include "ViewHierarchyNavigator.h"
+#include <arkui/native_node.h>
+#include <arkui/native_type.h>
 
 namespace rnoh {
+struct FocusedInputLayoutData {
+    int target = -1;
+    int parentScrollViewTarget = -1;
+    double absoluteX = 0;
+    double absoluteY = 0;
+    double x = 0;
+    double y = 0;
+    double width = 0;
+    double height = 0;
+
+    bool operator==(FocusedInputLayoutData const &other) const {
+        return target == other.target &&
+               parentScrollViewTarget == other.parentScrollViewTarget &&
+               absoluteX == other.absoluteX &&
+               absoluteY == other.absoluteY &&
+               x == other.x &&
+               y == other.y &&
+               width == other.width &&
+               height == other.height;
+    }
+};
+
 enum KeyboardControllerStatus { HIDE = 0, SHOW = 1 };
 class KeyboardControllerViewComponentInstance
     : public CppComponentInstance<facebook::react::KeyboardControllerViewShadowNode>,
@@ -93,6 +117,17 @@ private:
     void setWindowLayoutFullScreen();
     void setFocusTo(const std::string& direction);
     void focusDidSet();
+    void syncUpLayout();
+    void dispatchLayoutToJS(FocusedInputLayoutData const &event);
+    TextInputComponentInstance::Shared findFocusedTextInput();
+    int findParentScrollViewTarget(ComponentInstance::Shared const &input);
+    double pxToVp(double px) const;
+    void updateFocusedInputLayoutObserver(TextInputComponentInstance::Shared const &focusedInput);
+    void clearFocusedInputLayoutObserver();
+    void handleFocusedInputLayoutEvent(ArkUI_NodeEvent *event);
+    static void focusedInputLayoutEventReceiver(ArkUI_NodeEvent *event);
+    FocusedInputLayoutData m_lastLayoutEvent;
+    ArkUI_NodeHandle m_observedFocusedInputHandle = nullptr;
     void *high_lib_handle = NULL;
     ArkUI_ErrorCode (*focusRequestMethod)(ArkUI_NodeHandle node);
 };
