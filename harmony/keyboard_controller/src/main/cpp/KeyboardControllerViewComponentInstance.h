@@ -78,6 +78,7 @@ class KeyboardControllerViewComponentInstance
       public ArkTSMessageHub::Observer {
 public:
     KeyboardControllerViewComponentInstance(Context context);
+    ~KeyboardControllerViewComponentInstance() override;
     void onKeyboardMoveStart();
     void onKeyboardMove();
     void onKeyboardMoveEnd();
@@ -102,17 +103,18 @@ public:
 
 protected:
 private:
-    bool enabled;
-    bool statusBarTranslucent;
-    bool navigationBarTranslucent;
-    bool preserveEdgeToEdge;
-    double keyboardHeight;
+    bool enabled = false;
+    bool statusBarTranslucent = false;
+    bool navigationBarTranslucent = false;
+    bool preserveEdgeToEdge = false;
+    double keyboardHeight = 0;
     std::map<std::string, std::any> dictionary;
-    int keyboardStatus;
+    int keyboardStatus = KeyboardControllerStatus::HIDE;
     std::vector<TextInputComponentInstance::Shared> textInputVector{};
     CustomNode m_customNode{};
     ComponentInstance::Shared currentResponder;
     void findTextInputComponents(ComponentInstance::Shared const &parentComponentInstance);
+    void clearTextInputDelegates(ComponentInstance::Shared const &parentComponentInstance);
     void setWindowSystemBarEnable();
     void startKeyboardObserver();
     void closeKeyboardObserver();
@@ -124,12 +126,8 @@ private:
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     void dispatchKeyboardFocusChangedIfNeeded();
     TextInputComponentInstance::Shared findFocusedTextInput();
-    // Emit onFocusedInputSelectionChanged; x/y default 0 when caret geometry unavailable
-    // Emit selection; x/y are caret coords relative to input in vp (0 if unavailable)
     void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos, double caretX, double caretY);
-    // NODE_TEXT_INPUT/AREA_CARET_OFFSET -> index + x + y (component-relative)
     bool readCaretOffset(ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const;
-    // Push focused TextInput {target, type} to ArkTS for KeyboardEvents will/did payload
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;
