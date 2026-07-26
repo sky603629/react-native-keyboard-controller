@@ -32,7 +32,9 @@
 #define TESTER_HARMONY_KEYBOARD_CONTROLLER_SRC_MAIN_CPP_KEYBOARDCONTROLLERVIEWCOMPONENTINSTANCE_H
 
 #include <any>
+#include <optional>
 #include "RNOH/CppComponentInstance.h"
+#include "RNOH/TaskExecutor/TaskExecutor.h"
 #include "KeyboardControllerViewComponentDescriptor.h"
 #include "RNOHCorePackage/ComponentInstances/TextInputComponentInstance.h"
 #include "RNOH/arkui/CustomNode.h"
@@ -40,6 +42,7 @@
 #include "RNOH/arkui/TextInputNode.h"
 #include "RNOH/arkui/TextAreaNode.h"
 #include "ViewHierarchyNavigator.h"
+#include "RNOH/arkui/NativeNodeApi.h"
 #include <arkui/native_node.h>
 #include <arkui/native_type.h>
 
@@ -113,15 +116,19 @@ private:
     void setWindowSystemBarEnable();
     void startKeyboardObserver();
     void closeKeyboardObserver();
-    void keyboardHeightChangeHandle();
+    void keyboardHeightChangeHandle(double previousKeyboardHeight);
     void setWindowLayoutFullScreen();
     void setFocusTo(const std::string& direction);
     void focusDidSet();
     void syncUpLayout();
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
+    void dispatchKeyboardFocusChangedIfNeeded();
     TextInputComponentInstance::Shared findFocusedTextInput();
     // Emit onFocusedInputSelectionChanged; x/y default 0 when caret geometry unavailable
-    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
+    // Emit selection; x/y are caret coords relative to input in vp (0 if unavailable)
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos, double caretX, double caretY);
+    // NODE_TEXT_INPUT/AREA_CARET_OFFSET -> index + x + y (component-relative)
+    bool readCaretOffset(ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const;
     // Push focused TextInput {target, type} to ArkTS for KeyboardEvents will/did payload
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
@@ -130,8 +137,21 @@ private:
     void clearFocusedInputLayoutObserver();
     void handleFocusedInputLayoutEvent(ArkUI_NodeEvent *event);
     static void focusedInputLayoutEventReceiver(ArkUI_NodeEvent *event);
+    void cancelKeyboardAnimation();
+    void startKeyboardAnimation(double fromHeight, double toHeight, int target);
+    void scheduleKeyboardAnimationFrame(
+        uint64_t generation,
+        double fromHeight,
+        double toHeight,
+        int target,
+        int frame,
+        int totalFrames);
     FocusedInputLayoutData m_lastLayoutEvent;
+    int m_lastKeyboardEventTarget = -1;
+    bool m_isHandlingKeyboardHeightChange = false;
     ArkUI_NodeHandle m_observedFocusedInputHandle = nullptr;
+    std::optional<TaskExecutor::DelayedTask> m_keyboardAnimationTask;
+    uint64_t m_keyboardAnimationGeneration = 0;
     void *high_lib_handle = NULL;
     ArkUI_ErrorCode (*focusRequestMethod)(ArkUI_NodeHandle node);
 };
