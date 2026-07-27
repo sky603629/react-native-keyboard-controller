@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已分析完第 `155 / 155` 笔 `38076a9df8`；第 `123-125 / 155` 的 `KeyboardAvoidingView.automaticOffset`、类型修复与 `viewPositionInWindow` 已通过 Fabric ShadowTree 测量方案完成测试工程真机验证并回写主仓。此前 ComponentInstance -> ArkUI node 路线无法解析 layout-only View 的结论已纠正，该失败不代表普通 Fabric tag 无法测量。第 `126`、`130 / 155` 的 KASV 顶边自动检测已解除底层阻塞，改为可同步待验证。第 `127 / 155` `KeyboardToolbar.Group` 已完成验证并回写主仓；第 `117 / 155` ChatScrollView 仍因 contentInset/合法滚动范围缺失暂不支持；其他状态以逐笔表格为准。
+- 当前指针：已分析完第 `155 / 155` 笔 `38076a9df8`；第 `123-125 / 155` 的 `KeyboardAvoidingView.automaticOffset`、类型修复与 `viewPositionInWindow` 已通过 Fabric ShadowTree 测量方案完成测试工程真机验证并回写主仓。此前 ComponentInstance -> ArkUI node 路线无法解析 layout-only View 的结论已纠正，该失败不代表普通 Fabric tag 无法测量。第 `126 / 155` KASV 顶边自动检测已通过固定 Header 遮挡场景真机验证并回写主仓；第 `130 / 155` 的测量失败降级是下一笔待同步修复。第 `127 / 155` `KeyboardToolbar.Group` 已完成验证并回写主仓；第 `117 / 155` ChatScrollView 仍因 contentInset/合法滚动范围缺失暂不支持；其他状态以逐笔表格为准。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -72,7 +72,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-125 / 155` automaticOffset 完整链路和第 `127 / 155` Toolbar.Group 已完成测试工程验证并回写主仓。第 `126`、`130 / 155` 因底层窗口测量已恢复，改为可同步待验证；第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
+截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测完整链路和第 `127 / 155` Toolbar.Group 已完成测试工程验证并回写主仓。第 `130 / 155` 是下一笔待同步的测量失败降级；第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
 
 | 指标 | 数量 |
 | --- | ---: |
@@ -98,7 +98,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 - 最后一笔已分析：`155` / `155`，`38076a9df8`
 - 下一笔待处理：无，`1.16.5..1.21.8` 源码相关 commit 已全量审计完毕
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
-- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `126`、`130 / 155` 可复用已验证的 `viewPositionInWindow` 同步 KASV 顶边自动检测和失败降级；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-125 / 155` automaticOffset 完整链路已验证并回写，不再列为能力缺失。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
+- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `130 / 155` 应紧跟已完成的第 126 笔，为 KASV 顶边窗口测量补失败降级；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测链路已验证并回写，不再列为能力缺失。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
 
 ## 状态说明
 
@@ -244,7 +244,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 123 | `66e62784c3` | 2026-03-11 | JS/TS | fix: add `automaticOffset` prop for correct KAV positioning in modals (#1346) | 已同步-已验证 | 已同步公开 `automaticOffset?: boolean`，默认 `false`；开启后使用窗口绝对坐标，`keyboardVerticalOffset` 作为额外避让距离。测试工程三种 behavior 与 0/50/100 offset 真机表现正确。 |
 | 124 | `f5dca3cdf9` | 2026-03-11 | JS/TS | fix: `KeyboardAvoidingView` types union (#1354) | 已同步 | 已按上游移除 discriminated union，统一 behavior 与 `contentContainerStyle` 类型，和 automaticOffset 功能一起落地。 |
 | 125 | `eb2dfbbe35` | 2026-03-12 | JS/TS+Android+iOS | fix: handle broken measureInWindow (#1355) | 已同步-已验证 | 已同步 `viewPositionInWindow` spec、类型、binding 和 KAV 调用。Harmony C++ 从 `UIManagerBinding` 按 tag 查 ShadowNode，基于当前 ShadowTree revision 调用 `dom::measureInWindow`，可测 layout-only/普通 Reanimated View；失败时 reject，JS 回退 `onLayout`，不修改上游 JS 结构。 |
-| 126 | `6872736017` | 2026-03-12 | JS/TS | fix: automatically detect top border of `KeyboardAwareScrollView` (#1352) | 已分析-可同步待验证 | `viewPositionInWindow` 底层阻塞已经解除，可按上游同步 `scrollViewPageY` 顶边判断；该 KASV 功能尚未实际回写和真机验证，需与第 130 的失败降级一起处理。 |
+| 126 | `6872736017` | 2026-03-12 | JS/TS | fix: automatically detect top border of `KeyboardAwareScrollView` (#1352) | 已同步-已验证 | 已按上游复用 `viewPositionInWindow` 测量 KASV 的窗口顶部 `scrollViewPageY`，顶部越界判断由固定窗口 `0` 改为 `point < scrollViewPageY`。测试工程通过固定 Header、程序化遮挡后重新聚焦的场景验证：旧条件下输入框会停留在遮挡区，新实现会自动恢复可见；`bottomOffset=0/40/80` 同时有效。该提交不新增公开 prop/API，第 130 的 Promise reject 降级保持为下一笔独立修复。 |
 | 127 | `4a32305f7e` | 2026-03-13 | JS/TS+Android+iOS | feat: `KeyboardToolbar.Group` (#881) | 代码仓已提交 | 已同步 `KeyboardToolbar.Group` compound API、类型和 `KeyboardToolbarGroupViewNativeComponent` spec；Harmony 新增 `KeyboardToolbarGroupView` marker descriptor/binder/instance 并完成 Fabric package 注册。导航扫描跳过 Group，当前焦点在组内时以最近 Group 为扫描和 Prev/Next 边界；实际焦点改用包含 Group 的深度 DFS，避免组内输入被布局、selection 或键盘事件链漏掉。测试工程保留 `KeyboardToolbar/Group.tsx` demo，覆盖两组输入、组外输入和普通 View 嵌套输入；TypeScript、Prettier、Harmony codegen、Metro、CMake/Ninja 与签名 HAP 构建均通过。 |
 | 128 | `0bb348ace6` | 2026-03-14 | JS/TS | refactor: rename `minimumContentPadding` to `blankSpace` (#1359) | 因系统能力缺失不能完全做 | 上游把第 122 的 public prop 重命名为 `blankSpace`，运行语义仍是 `max(blankSpace, keyboardPadding + extraContentPadding)`。JS 后续必须采用最终名称，但 Harmony 原生 contentInset/scroll range 闭环缺失，属性暂不支持，不得增加 Harmony JS fallback。 |
 | 129 | `7a7b6cab6d` | 2026-03-16 | iOS | fix: typo in arch definition (#1367) | 已分析-不需同步 | 上游只把 iOS `ClippingScrollViewDecoratorViewManager.mm` 中的 `#ifdef RCT_NEW_ARCH_ENABLE` 修为 `#ifdef RCT_NEW_ARCH_ENABLED`，解决 ObjC 新架构宏拼写错误。Harmony 无 ObjC/UIKit `ClippingScrollViewDecoratorViewManager.mm`，也没有 `RCT_NEW_ARCH_*` 宏编译路径；当前第 `108/118` 的 ClippingScrollView/contentInset 路线也未进入主仓，因此无同步点。 |
