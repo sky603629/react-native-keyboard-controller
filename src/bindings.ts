@@ -2,6 +2,7 @@ import React from "react";
 import { useColorScheme, View } from "react-native";
 
 import type {
+  ClippingScrollViewProps,
   FocusedInputEventsModule,
   KeyboardBackgroundViewProps,
   KeyboardControllerNativeModule,
@@ -28,17 +29,17 @@ export const KeyboardControllerNative: KeyboardControllerNativeModule = {
   removeListeners: NOOP,
 };
 export const KeyboardEvents: KeyboardEventsModule = {
-  addListener: () => ({ remove: NOOP } as EmitterSubscription),
+  addListener: () => ({ remove: NOOP }) as EmitterSubscription,
 };
 /**
  * This API is not documented, it's for internal usage only (for now), and is a subject to potential breaking changes in future.
  * Use it with cautious.
  */
 export const FocusedInputEvents: FocusedInputEventsModule = {
-  addListener: () => ({ remove: NOOP } as EmitterSubscription),
+  addListener: () => ({ remove: NOOP }) as EmitterSubscription,
 };
 export const WindowDimensionsEvents: WindowDimensionsEventsModule = {
-  addListener: () => ({ remove: NOOP } as EmitterSubscription),
+  addListener: () => ({ remove: NOOP }) as EmitterSubscription,
 };
 export const KeyboardControllerView =
   View as unknown as React.FC<KeyboardControllerProps>;
@@ -46,6 +47,8 @@ export const KeyboardGestureArea =
   View as unknown as React.FC<KeyboardGestureAreaProps>;
 export const RCTOverKeyboardView =
   View as unknown as React.FC<OverKeyboardViewProps>;
+export const ClippingScrollView =
+  View as unknown as React.FC<ClippingScrollViewProps>;
 export const KeyboardBackgroundView = React.forwardRef<
   RNView,
   KeyboardBackgroundViewProps

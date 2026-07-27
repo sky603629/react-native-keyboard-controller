@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import type {
+  ClippingScrollViewProps,
   FocusedInputEventsModule,
   KeyboardBackgroundViewProps,
   KeyboardControllerNativeModule,
@@ -70,6 +71,10 @@ export const KeyboardGestureArea: React.FC<KeyboardGestureAreaProps> =
     : ({ children }: KeyboardGestureAreaProps) => children;
 export const RCTOverKeyboardView: React.FC<OverKeyboardViewProps> =
   require("./specs/OverKeyboardViewNativeComponent").default;
+export const ClippingScrollView: React.FC<ClippingScrollViewProps> =
+  Platform.OS === "android"
+    ? require("./specs/ClippingScrollViewDecoratorViewNativeComponent").default
+    : ({ children }: ClippingScrollViewProps) => children;
 export const KeyboardBackgroundView = React.forwardRef<
   RNView,
   KeyboardBackgroundViewProps

@@ -117,6 +117,14 @@ export type KeyboardGestureAreaProps = {
 export type OverKeyboardViewProps = PropsWithChildren<{
   visible: boolean;
 }>;
+export type ClippingScrollViewProps = PropsWithChildren<
+  ViewProps & {
+    /** An additional space that gets applied to the bottom of the `ScrollView` (inside a scrollable content). Default is `0`. */
+    contentInsetBottom?: number;
+    /** An additional space that gets applied to the top of the `ScrollView` (inside a scrollable content). Default is `0`. */
+    contentInsetTop?: number;
+  }
+>;
 export type KeyboardBackgroundViewProps = PropsWithChildren<ViewProps>;
 export type KeyboardToolbarGroupViewProps = PropsWithChildren<ViewProps>;
 export type KeyboardExtenderProps = PropsWithChildren<{
