@@ -28,6 +28,12 @@
 
 #include "RNKeyboardController.h"
 
+#include <ReactCommon/TurboModuleUtils.h>
+#include <react/renderer/dom/DOM.h>
+#include <react/renderer/uimanager/UIManagerBinding.h>
+
+#include <utility>
+
 namespace rnoh {
 using namespace facebook;
 KeyboardController::KeyboardController(const ArkTSTurboModule::Context ctx, const std::string name) : ArkTSTurboModule(ctx, name)
@@ -42,6 +48,56 @@ KeyboardController::KeyboardController(const ArkTSTurboModule::Context ctx, cons
         ARK_METHOD_METADATA(addListener, 1),
         ARK_METHOD_METADATA(removeListeners, 1),
     };
+
+    methodMap_["viewPositionInWindow"] = MethodMetadata{
+        1,
+        [](jsi::Runtime& runtime,
+           react::TurboModule&,
+           const jsi::Value* args,
+           size_t count) -> jsi::Value {
+            if (count < 1 || !args[0].isNumber()) {
+                return react::createPromiseAsJSIValue(
+                    runtime,
+                    [](jsi::Runtime&, std::shared_ptr<react::Promise> promise) {
+                        promise->reject("viewPositionInWindow requires a numeric view tag");
+                    });
+            }
+
+            const auto tag = static_cast<react::Tag>(args[0].asNumber());
+            return react::createPromiseAsJSIValue(
+                runtime,
+                [tag](jsi::Runtime& promiseRuntime, std::shared_ptr<react::Promise> promise) {
+                    auto binding = react::UIManagerBinding::getBinding(promiseRuntime);
+                    if (!binding) {
+                        promise->reject("UIManagerBinding is unavailable");
+                        return;
+                    }
+
+                    auto& uiManager = binding->getUIManager();
+                    auto shadowNode = uiManager.findShadowNodeByTag_DEPRECATED(tag);
+                    if (!shadowNode) {
+                        promise->reject("Could not find ShadowNode for tag");
+                        return;
+                    }
+
+                    auto revisionProvider = uiManager.getShadowTreeRevisionProvider();
+                    auto currentRevision = revisionProvider == nullptr
+                        ? nullptr
+                        : revisionProvider->getCurrentRevision(shadowNode->getSurfaceId());
+                    if (!currentRevision) {
+                        promise->reject("Could not find current ShadowTree revision");
+                        return;
+                    }
+
+                    const auto rect = react::dom::measureInWindow(currentRevision, *shadowNode);
+                    jsi::Object result(promiseRuntime);
+                    result.setProperty(promiseRuntime, "x", rect.x);
+                    result.setProperty(promiseRuntime, "y", rect.y);
+                    result.setProperty(promiseRuntime, "width", rect.width);
+                    result.setProperty(promiseRuntime, "height", rect.height);
+                    promise->resolve(jsi::Value(std::move(result)));
+                });
+        }};
 }
 
 } // namespace rnoh

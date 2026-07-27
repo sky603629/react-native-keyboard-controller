@@ -199,6 +199,12 @@ export type KeyboardControllerModule = {
   addListener: (eventName: string) => void;
   removeListeners: (count: number) => void;
 };
+export type ViewPositionInWindowResult = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 export type KeyboardControllerNativeModule = {
   // android only
   setDefaultMode: () => void;
@@ -208,6 +214,9 @@ export type KeyboardControllerNativeModule = {
   // all platforms
   dismiss: (keepFocus: boolean, animated: boolean) => void;
   setFocusTo: (direction: Direction) => void;
+  viewPositionInWindow: (
+    viewTag: number,
+  ) => Promise<ViewPositionInWindowResult>;
   // native event module stuff
   addListener: (eventName: string) => void;
   removeListeners: (count: number) => void;
