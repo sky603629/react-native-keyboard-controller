@@ -27,7 +27,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 后续会话必须先读本文件和 `UPGRADE-COMMIT-TRACKING.md`，不能只凭聊天记录继续推进。
 
 - 顺序口径：严格按本文件 `1..155` 时间顺序推进。除非用户明确要求提前修某个已复现问题，否则不能跳号；提前同步的 commit 必须标注“不推进主线顺序游标”。
-- 当前指针：已分析完第 `155 / 155` 笔 `38076a9df8`；第 `123-125 / 155` 的 `KeyboardAvoidingView.automaticOffset`、类型修复与 `viewPositionInWindow` 已通过 Fabric ShadowTree 测量方案完成测试工程真机验证并回写主仓。此前 ComponentInstance -> ArkUI node 路线无法解析 layout-only View 的结论已纠正，该失败不代表普通 Fabric tag 无法测量。第 `126 / 155` KASV 顶边自动检测已通过固定 Header 遮挡场景真机验证并回写主仓；第 `130 / 155` 的测量失败降级是下一笔待同步修复。第 `127 / 155` `KeyboardToolbar.Group` 已完成验证并回写主仓；第 `117 / 155` ChatScrollView 仍因 contentInset/合法滚动范围缺失暂不支持；其他状态以逐笔表格为准。
+- 当前指针：已分析完第 `155 / 155` 笔 `38076a9df8`；第 `123-125 / 155` 的 `KeyboardAvoidingView.automaticOffset`、类型修复与 `viewPositionInWindow` 已通过 Fabric ShadowTree 测量方案完成测试工程真机验证并回写主仓。此前 ComponentInstance -> ArkUI node 路线无法解析 layout-only View 的结论已纠正，该失败不代表普通 Fabric tag 无法测量。第 `126 / 155` KASV 顶边自动检测已通过固定 Header 遮挡场景真机验证并回写主仓，第 `130 / 155` 的测量失败降级已按上游原样同步且按用户要求不单独验证。第 `127 / 155` `KeyboardToolbar.Group` 已完成验证并回写主仓；第 `117 / 155` ChatScrollView 仍因 contentInset/合法滚动范围缺失暂不支持；其他状态以逐笔表格为准。
 - 实际分析：每笔都要看上游真实 diff、改动文件和问题语义，再映射 Harmony 现有 JS/ArkTS/C++ 链路；不能根据 commit 标题或平台目录猜结论。
 - 平台 only：Android-only / iOS-only 也必须审计 Harmony 是否有同类问题、同类生命周期、同类窗口/状态栏/键盘事件/布局测量链路；确认无对应链路后才能写“已分析-不需同步”。
 - 测试优先：判断需要适配的 commit 先同步到测试工程，由用户编译/验证；用户确认后再回写主仓、更新台账、提交并推送 `origin/ups`。
@@ -72,7 +72,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测完整链路和第 `127 / 155` Toolbar.Group 已完成测试工程验证并回写主仓。第 `130 / 155` 是下一笔待同步的测量失败降级；第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
+截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测完整链路和第 `127 / 155` Toolbar.Group 已完成测试工程验证并回写主仓；第 `130 / 155` 的测量失败降级已直接同步。第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选，第 `132 / 155` 是下一笔可直接同步的公共布局修复。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
 
 | 指标 | 数量 |
 | --- | ---: |
@@ -98,7 +98,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 - 最后一笔已分析：`155` / `155`，`38076a9df8`
 - 下一笔待处理：无，`1.16.5..1.21.8` 源码相关 commit 已全量审计完毕
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
-- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `130 / 155` 应紧跟已完成的第 126 笔，为 KASV 顶边窗口测量补失败降级；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测链路已验证并回写，不再列为能力缺失。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
+- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `132 / 155` 可同步 `ScrollViewWithBottomPadding` 的父容器自适应布局修复；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测链路已验证并回写，第 `130 / 155` 的失败降级已直接同步。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
 
 ## 状态说明
 
@@ -248,7 +248,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 127 | `4a32305f7e` | 2026-03-13 | JS/TS+Android+iOS | feat: `KeyboardToolbar.Group` (#881) | 代码仓已提交 | 已同步 `KeyboardToolbar.Group` compound API、类型和 `KeyboardToolbarGroupViewNativeComponent` spec；Harmony 新增 `KeyboardToolbarGroupView` marker descriptor/binder/instance 并完成 Fabric package 注册。导航扫描跳过 Group，当前焦点在组内时以最近 Group 为扫描和 Prev/Next 边界；实际焦点改用包含 Group 的深度 DFS，避免组内输入被布局、selection 或键盘事件链漏掉。测试工程保留 `KeyboardToolbar/Group.tsx` demo，覆盖两组输入、组外输入和普通 View 嵌套输入；TypeScript、Prettier、Harmony codegen、Metro、CMake/Ninja 与签名 HAP 构建均通过。 |
 | 128 | `0bb348ace6` | 2026-03-14 | JS/TS | refactor: rename `minimumContentPadding` to `blankSpace` (#1359) | 因系统能力缺失不能完全做 | 上游把第 122 的 public prop 重命名为 `blankSpace`，运行语义仍是 `max(blankSpace, keyboardPadding + extraContentPadding)`。JS 后续必须采用最终名称，但 Harmony 原生 contentInset/scroll range 闭环缺失，属性暂不支持，不得增加 Harmony JS fallback。 |
 | 129 | `7a7b6cab6d` | 2026-03-16 | iOS | fix: typo in arch definition (#1367) | 已分析-不需同步 | 上游只把 iOS `ClippingScrollViewDecoratorViewManager.mm` 中的 `#ifdef RCT_NEW_ARCH_ENABLE` 修为 `#ifdef RCT_NEW_ARCH_ENABLED`，解决 ObjC 新架构宏拼写错误。Harmony 无 ObjC/UIKit `ClippingScrollViewDecoratorViewManager.mm`，也没有 `RCT_NEW_ARCH_*` 宏编译路径；当前第 `108/118` 的 ClippingScrollView/contentInset 路线也未进入主仓，因此无同步点。 |
-| 130 | `ecd3bbd8e3` | 2026-03-18 | JS/TS | fix: could not fing view for tag warning (#1379) | 已分析-可同步待验证 | Harmony `viewPositionInWindow` 会在 tag/revision 不可用时 reject，因此同步第 126 时必须同时保留上游 try/catch，让懒加载或卸载竞态回退旧顶边值；尚未回写 KASV。 |
+| 130 | `ecd3bbd8e3` | 2026-03-18 | JS/TS | fix: could not fing view for tag warning (#1379) | 已同步-未单独验证 | 已按上游在 KASV 的 `viewPositionInWindow` 调用外增加 `try/catch`。当 lazy pager、卸载竞态或 ShadowTree revision 暂不可用导致 Promise reject 时，静默保留旧的 `scrollViewPageY`；正常测量和第 126 的顶部恢复行为不变。不新增公开接口或原生代码，按用户要求直接提交、不单独验证。 |
 | 131 | `bba6afc9eb` | 2026-03-19 | JS/TS | perf: don't change `currentKeyboardFrame` each frame (#1381) | 已分析-暂不同步 | 上游把 KASV 的 `syncKeyboardFrame(e)` 从每帧 `onMove` 移到 `onStart`，意图是在第 `111 / 155` 的 `ScrollViewWithBottomPadding` / `contentInset` 路线下只在键盘动画开始或结束时改 spacer/inset，降低 UI 线程 relayout 压力。Harmony 当前仍保留旧的底部 `Reanimated.View paddingBottom` 路线，因为第 `108/109/111` 的稳定 contentInset/scroll range 已验证不能完整实现；旧路线依赖每帧 spacer 与键盘高度同步来维持打开/收起过渡和 `+1` 防到达末端重布局策略。单独套用本优化会改变旧路线时序，不能视作等价上游同步。 |
 | 132 | `2f82c434c9` | 2026-03-20 | JS/TS | fix: KeyboardAwareScrollView collapses to zero height inside auto-sizing parents (#1384) | 已分析-可同步 | 上游只把 `ScrollViewWithBottomPadding/styles.ts` 的 `flex: 1` 改为 `flexGrow: 1, flexShrink: 1`。该文件已随第 117 的上游 JS 形状进入主仓，存在明确落点；这是公共布局修复，可按 commit 顺序原样同步，但不会补齐 Harmony contentInset 原生能力。 |
 | 133 | `90dd77289e` | 2026-03-21 | JS/TS | fix: `KeyboardAwareScrollView` regression after optimization (#1387) | 已分析-暂不同步 | 上游修第 `131 / 155` 的回归：`syncKeyboardFrame(e)` 必须放在 `keyboardHeight.value = e.height` 之后，否则 `interpolate(e.height, [0, 0], [0, 0])` 会得到 0，导致优化后首次 padding 不生效。该提交是 131 的配套修复；由于 Harmony 不同步 131 的 contentInset 路线优化，本提交也不能单独同步。若未来同步 131，必须同时同步本提交的调用顺序。 |
