@@ -1,5 +1,5 @@
-import React, { forwardRef, useCallback, useEffect, useMemo } from "react";
-import { Platform, StyleSheet } from "react-native";
+import React, { forwardRef, useCallback, useMemo } from "react";
+import { StyleSheet } from "react-native";
 import { useAnimatedRef, useAnimatedStyle } from "react-native-reanimated";
 import Reanimated from "react-native-reanimated";
 
@@ -10,8 +10,6 @@ import { useChatKeyboard } from "./useChatKeyboard";
 
 import type { KeyboardChatScrollViewProps } from "./types";
 import type { LayoutChangeEvent } from "react-native";
-
-const IS_HARMONY = (Platform.OS as string) === "harmony";
 
 const KeyboardChatScrollView = forwardRef<
   Reanimated.ScrollView,
@@ -33,15 +31,6 @@ const KeyboardChatScrollView = forwardRef<
   ) => {
     const scrollViewRef = useAnimatedRef<Reanimated.ScrollView>();
     const onRef = useCombinedRef(ref, scrollViewRef);
-    const effectiveInverted = IS_HARMONY ? false : inverted;
-
-    useEffect(() => {
-      if (IS_HARMONY && __DEV__ && inverted) {
-        console.warn(
-          "[KeyboardChatScrollView] inverted is not supported by the Harmony spacer implementation and has been disabled.",
-        );
-      }
-    }, [inverted]);
 
     const {
       padding,
@@ -50,7 +39,7 @@ const KeyboardChatScrollView = forwardRef<
       onLayout: onLayoutInternal,
       onContentSizeChange: onContentSizeChangeInternal,
     } = useChatKeyboard(scrollViewRef, {
-      inverted: effectiveInverted,
+      inverted,
       keyboardLiftBehavior,
       freeze,
       offset,
@@ -66,12 +55,10 @@ const KeyboardChatScrollView = forwardRef<
 
     const onContentSizeChange = useCallback(
       (w: number, h: number) => {
-        const contentHeight = IS_HARMONY ? Math.max(h - padding.value, 0) : h;
-
-        onContentSizeChangeInternal(w, contentHeight);
-        onContentSizeChangeProp?.(w, contentHeight);
+        onContentSizeChangeInternal(w, h);
+        onContentSizeChangeProp?.(w, h);
       },
-      [onContentSizeChangeInternal, onContentSizeChangeProp, padding],
+      [onContentSizeChangeInternal, onContentSizeChangeProp],
     );
 
     // Invisible view whose animated style changes every frame during keyboard
@@ -96,7 +83,7 @@ const KeyboardChatScrollView = forwardRef<
           {...rest}
           bottomPadding={padding}
           contentOffsetY={contentOffsetY}
-          inverted={effectiveInverted}
+          inverted={inverted}
           ScrollViewComponent={ScrollViewComponent}
           onContentSizeChange={onContentSizeChange}
           onLayout={onLayout}

@@ -1,9 +1,6 @@
 import React, { forwardRef } from "react";
 import { Platform, View } from "react-native";
-import Reanimated, {
-  useAnimatedProps,
-  useAnimatedStyle,
-} from "react-native-reanimated";
+import Reanimated, { useAnimatedProps } from "react-native-reanimated";
 
 import { ClippingScrollView } from "../../bindings";
 
@@ -12,9 +9,9 @@ import styles from "./styles";
 import type { ScrollViewProps } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 
-const IS_HARMONY = (Platform.OS as string) === "harmony";
+const OS = Platform.OS;
 const ReanimatedClippingScrollView =
-  Platform.OS === "android"
+  OS === "android"
     ? Reanimated.createAnimatedComponent(ClippingScrollView)
     : ClippingScrollView;
 
@@ -31,6 +28,7 @@ type ScrollViewWithBottomPaddingProps = {
   children?: React.ReactNode;
   inverted?: boolean;
   bottomPadding: SharedValue<number>;
+  /** Absolute Y content offset (iOS only, for KeyboardChatScrollView). */
   contentOffsetY?: SharedValue<number>;
 } & ScrollViewProps;
 
@@ -44,7 +42,7 @@ const ScrollViewWithBottomPadding = forwardRef<
       bottomPadding,
       contentInset,
       scrollIndicatorInsets,
-      inverted = false,
+      inverted,
       contentOffsetY,
       children,
       ...rest
@@ -53,22 +51,27 @@ const ScrollViewWithBottomPadding = forwardRef<
   ) => {
     const animatedProps = useAnimatedProps(() => {
       const insetTop = inverted ? bottomPadding.value : 0;
-      const insetBottom = inverted ? 0 : bottomPadding.value;
+      const insetBottom = !inverted ? bottomPadding.value : 0;
+      const bottom = insetBottom + (contentInset?.bottom || 0);
+      const top = insetTop + (contentInset?.top || 0);
+
       const result: Record<string, unknown> = {
+        // iOS prop
         contentInset: {
-          bottom: insetBottom + (contentInset?.bottom || 0),
-          top: insetTop + (contentInset?.top || 0),
+          bottom: bottom,
+          top: top,
           right: contentInset?.right,
           left: contentInset?.left,
         },
-        contentInsetBottom: insetBottom,
-        contentInsetTop: insetTop,
         scrollIndicatorInsets: {
-          bottom: insetBottom + (scrollIndicatorInsets?.bottom || 0),
-          top: insetTop + (scrollIndicatorInsets?.top || 0),
+          bottom: bottom,
+          top: top,
           right: scrollIndicatorInsets?.right,
           left: scrollIndicatorInsets?.left,
         },
+        // Android prop
+        contentInsetBottom: insetBottom,
+        contentInsetTop: insetTop,
       };
 
       if (contentOffsetY) {
@@ -77,7 +80,6 @@ const ScrollViewWithBottomPadding = forwardRef<
 
       return result;
     }, [
-      inverted,
       contentInset?.bottom,
       contentInset?.top,
       contentInset?.right,
@@ -86,23 +88,9 @@ const ScrollViewWithBottomPadding = forwardRef<
       scrollIndicatorInsets?.top,
       scrollIndicatorInsets?.right,
       scrollIndicatorInsets?.left,
+      inverted,
       contentOffsetY,
     ]);
-    const spacerStyle = useAnimatedStyle(
-      () => ({
-        height: inverted ? 0 : bottomPadding.value,
-      }),
-      [inverted],
-    );
-
-    if (IS_HARMONY) {
-      return (
-        <ScrollViewComponent ref={ref} contentInset={contentInset} {...rest}>
-          {children}
-          <Reanimated.View pointerEvents="none" style={spacerStyle} />
-        </ScrollViewComponent>
-      );
-    }
 
     return (
       <ReanimatedClippingScrollView
@@ -111,6 +99,10 @@ const ScrollViewWithBottomPadding = forwardRef<
       >
         <ScrollViewComponent ref={ref} animatedProps={animatedProps} {...rest}>
           {inverted ? (
+            // The only thing it can break is `StickyHeader`, but it's already broken in FlatList and other lists
+            // don't support this functionality, so we can add additional view here
+            // The correct fix would be to add a new prop in ScrollView that allows
+            // to customize children extraction logic and skip custom view
             <View collapsable={false} nativeID="container">
               {children}
             </View>
