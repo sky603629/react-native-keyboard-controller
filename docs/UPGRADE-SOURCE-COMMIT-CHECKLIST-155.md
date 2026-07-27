@@ -72,7 +72,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 
 ## 当前进度
 
-截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测完整链路和第 `127 / 155` Toolbar.Group 已完成测试工程验证并回写主仓；第 `130 / 155` 的测量失败降级已直接同步。第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选，第 `132 / 155` 是下一笔可直接同步的公共布局修复。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
+截至第 `155 / 155` 笔已按时间顺序完成证据审计；第 `93`、`95 / 155`，第 `96`、`100 / 155`，第 `101 / 155`，第 `107 / 155` 已补同步测试工程、由用户验证通过、回写主仓并推送到 `origin/ups`；第 `123-127 / 155` 中可实现的 automaticOffset、窗口测量、KASV 顶边检测和 Toolbar.Group 已完成测试工程验证并回写主仓；第 `130 / 155` 的测量失败降级已直接同步，第 `132 / 155` 自适应父容器布局修复已验证并回写。第 `28`、`75`、`139`、`147 / 155` 仍是待测试候选。第 `108 / 155` 及 ChatScrollView contentInset 依赖链仍因原生滚动范围能力缺失不能完全做；其他逐笔状态见下表。
 
 | 指标 | 数量 |
 | --- | ---: |
@@ -98,7 +98,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 - 最后一笔已分析：`155` / `155`，`38076a9df8`
 - 下一笔待处理：无，`1.16.5..1.21.8` 源码相关 commit 已全量审计完毕
 - 已提前同步：`91` / `155`，`852fa4a223`，用于修复动态 `bottomOffset` over-scrolling，不推进主线顺序游标
-- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `132 / 155` 可同步 `ScrollViewWithBottomPadding` 的父容器自适应布局修复；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测链路已验证并回写，第 `130 / 155` 的失败降级已直接同步。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
+- 当前待验证：第 `28 / 155`、`75 / 155` 可做 Harmony `windowDidResize` 事件链路试验；第 `139 / 155` 可验证 keyboardBorderRadius；第 `147 / 155` 可验证 Toolbar fixed bounds。第 `123-126 / 155` automaticOffset、窗口测量与 KASV 顶边检测链路以及第 `132 / 155` 自适应父容器布局修复已验证并回写，第 `130 / 155` 的失败降级已直接同步。第 `108 / 155` 和 Chat 专属属性仍受 contentInset/稳定滚动范围限制；第 `146 / 155` opening dismiss 试验已撤销。
 
 ## 状态说明
 
@@ -250,7 +250,7 @@ git -C "E:\Devsoftware\kbc\react-native-keyboard-controller" log --reverse --dat
 | 129 | `7a7b6cab6d` | 2026-03-16 | iOS | fix: typo in arch definition (#1367) | 已分析-不需同步 | 上游只把 iOS `ClippingScrollViewDecoratorViewManager.mm` 中的 `#ifdef RCT_NEW_ARCH_ENABLE` 修为 `#ifdef RCT_NEW_ARCH_ENABLED`，解决 ObjC 新架构宏拼写错误。Harmony 无 ObjC/UIKit `ClippingScrollViewDecoratorViewManager.mm`，也没有 `RCT_NEW_ARCH_*` 宏编译路径；当前第 `108/118` 的 ClippingScrollView/contentInset 路线也未进入主仓，因此无同步点。 |
 | 130 | `ecd3bbd8e3` | 2026-03-18 | JS/TS | fix: could not fing view for tag warning (#1379) | 已同步-未单独验证 | 已按上游在 KASV 的 `viewPositionInWindow` 调用外增加 `try/catch`。当 lazy pager、卸载竞态或 ShadowTree revision 暂不可用导致 Promise reject 时，静默保留旧的 `scrollViewPageY`；正常测量和第 126 的顶部恢复行为不变。不新增公开接口或原生代码，按用户要求直接提交、不单独验证。 |
 | 131 | `bba6afc9eb` | 2026-03-19 | JS/TS | perf: don't change `currentKeyboardFrame` each frame (#1381) | 已分析-暂不同步 | 上游把 KASV 的 `syncKeyboardFrame(e)` 从每帧 `onMove` 移到 `onStart`，意图是在第 `111 / 155` 的 `ScrollViewWithBottomPadding` / `contentInset` 路线下只在键盘动画开始或结束时改 spacer/inset，降低 UI 线程 relayout 压力。Harmony 当前仍保留旧的底部 `Reanimated.View paddingBottom` 路线，因为第 `108/109/111` 的稳定 contentInset/scroll range 已验证不能完整实现；旧路线依赖每帧 spacer 与键盘高度同步来维持打开/收起过渡和 `+1` 防到达末端重布局策略。单独套用本优化会改变旧路线时序，不能视作等价上游同步。 |
-| 132 | `2f82c434c9` | 2026-03-20 | JS/TS | fix: KeyboardAwareScrollView collapses to zero height inside auto-sizing parents (#1384) | 已分析-可同步 | 上游只把 `ScrollViewWithBottomPadding/styles.ts` 的 `flex: 1` 改为 `flexGrow: 1, flexShrink: 1`。该文件已随第 117 的上游 JS 形状进入主仓，存在明确落点；这是公共布局修复，可按 commit 顺序原样同步，但不会补齐 Harmony contentInset 原生能力。 |
+| 132 | `2f82c434c9` | 2026-03-20 | JS/TS | fix: KeyboardAwareScrollView collapses to zero height inside auto-sizing parents (#1384) | 已同步-已验证 | 已按上游把 `ScrollViewWithBottomPadding/styles.ts` 的 `flex: 1` 改为 `flexGrow: 1, flexShrink: 1`，保留 `flexBasis: auto` 的固有尺寸计算。测试工程独立 demo 使用无固定高度、无 flex 的父容器，确认输入项正常显示、测量高度大于 0，切换长短内容后高度能够随内容变化。该修复不补齐 Harmony contentInset 原生能力。 |
 | 133 | `90dd77289e` | 2026-03-21 | JS/TS | fix: `KeyboardAwareScrollView` regression after optimization (#1387) | 已分析-暂不同步 | 上游修第 `131 / 155` 的回归：`syncKeyboardFrame(e)` 必须放在 `keyboardHeight.value = e.height` 之后，否则 `interpolate(e.height, [0, 0], [0, 0])` 会得到 0，导致优化后首次 padding 不生效。该提交是 131 的配套修复；由于 Harmony 不同步 131 的 contentInset 路线优化，本提交也不能单独同步。若未来同步 131，必须同时同步本提交的调用顺序。 |
 | 134 | `9acd790895` | 2026-03-23 | JS/TS | fix: remove unnecessary code (#1389) | 已分析-暂不同步 | 上游删除 KASV spacer 的 `+1` 和相关注释，理由是 131 后不再每帧调整 spacer，且第 `111 / 155` 的 ghost padding 处理已经覆盖旧问题。Harmony 当前没有第 111 的 `removeGhostPadding` / `ScrollViewWithBottomPadding` 底座，仍使用旧 padding view，源码中 `+1` 正是当前旧路线避免滚到末端触发布局抖动的保护；不能删除。 |
 | 135 | `b28ef3b04d` | 2026-03-23 | JS/TS | Fix extraContentPadding not adjusting scroll when it changes by large amount (#1371) | 因系统能力缺失不能完全做 | 上游要求 `contentOffset` 和动态 `contentInset` 原子更新，或等待 inset 提交后再滚动。Harmony 当前既不能正确应用/反馈 inset，也不能保证更新后的合法范围，因此该修复及 `extraContentPadding` 属性暂不支持；JS 后续仍应按上游原样同步。 |
