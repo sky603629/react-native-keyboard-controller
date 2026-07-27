@@ -41,8 +41,12 @@ declare function px2vp(px: number): number;
 // 原生 keyboardWillShow/keyboardWillHide 事件(API 20+)的起始版本
 const NATIVE_KEYBOARD_WILL_EVENT_MIN_API = 20;
 
+interface KeyboardControllerConstants {
+  keyboardBorderRadius: number;
+}
+
 interface RNKeyboardControllerSpec {
-  getConstants(): {};
+  getConstants(): KeyboardControllerConstants;
 
   setInputMode(mode: number): void;
 
@@ -112,7 +116,9 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     );
   }
 
-  readonly getConstants: () => {};
+  getConstants(): KeyboardControllerConstants {
+    return { keyboardBorderRadius: 0 };
+  }
 
   // set mode
   setInputMode(mode: number): void {

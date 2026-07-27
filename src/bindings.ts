@@ -29,6 +29,9 @@ export const KeyboardControllerNative: KeyboardControllerNativeModule = {
     Promise.resolve({ x: 0, y: 0, width: 0, height: 0 }),
   addListener: NOOP,
   removeListeners: NOOP,
+  getConstants: () => ({
+    keyboardBorderRadius: 0,
+  }),
 };
 export const KeyboardEvents: KeyboardEventsModule = {
   addListener: () => ({ remove: NOOP }) as EmitterSubscription,
