@@ -1,14 +1,25 @@
-import { NativeEventEmitter, Platform } from "react-native";
+import React from "react";
+import {
+  NativeEventEmitter,
+  Platform,
+  useColorScheme,
+  View,
+} from "react-native";
 
 import type {
+  ClippingScrollViewProps,
   FocusedInputEventsModule,
+  KeyboardBackgroundViewProps,
   KeyboardControllerNativeModule,
   KeyboardControllerProps,
   KeyboardEventsModule,
+  KeyboardExtenderProps,
   KeyboardGestureAreaProps,
+  KeyboardToolbarGroupViewProps,
   OverKeyboardViewProps,
   WindowDimensionsEventsModule,
 } from "./types";
+import type { View as RNView } from "react-native";
 
 const LINKING_ERROR =
   `The package 'react-native-keyboard-controller' doesn't seem to be linked. Make sure: \n\n` +
@@ -16,6 +27,7 @@ const LINKING_ERROR =
   "- You rebuilt the app after installing the package\n" +
   "- You are not using Expo Go\n";
 
+const KeyboardControllerViewNativeComponentModule = require("./specs/KeyboardControllerViewNativeComponent");
 const RCTKeyboardController =
   require("./specs/NativeKeyboardController").default;
 
@@ -53,10 +65,33 @@ export const WindowDimensionsEvents: WindowDimensionsEventsModule = {
     eventEmitter.addListener(KEYBOARD_CONTROLLER_NAMESPACE + name, cb),
 };
 export const KeyboardControllerView: React.FC<KeyboardControllerProps> =
-  require("./specs/KeyboardControllerViewNativeComponent").default;
+  KeyboardControllerViewNativeComponentModule.default;
+export const KeyboardControllerViewCommands =
+  KeyboardControllerViewNativeComponentModule.Commands;
 export const KeyboardGestureArea: React.FC<KeyboardGestureAreaProps> =
   (Platform.OS === "android" && Platform.Version >= 30) || Platform.OS === "ios"
     ? require("./specs/KeyboardGestureAreaNativeComponent").default
     : ({ children }: KeyboardGestureAreaProps) => children;
 export const RCTOverKeyboardView: React.FC<OverKeyboardViewProps> =
   require("./specs/OverKeyboardViewNativeComponent").default;
+export const ClippingScrollView: React.FC<ClippingScrollViewProps> =
+  Platform.OS === "android"
+    ? require("./specs/ClippingScrollViewDecoratorViewNativeComponent").default
+    : ({ children }: ClippingScrollViewProps) => children;
+export const KeyboardBackgroundView = React.forwardRef<
+  RNView,
+  KeyboardBackgroundViewProps
+>(({ style, ...props }, ref) => {
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === "dark" ? "#2c2c2e" : "#eceff3";
+
+  return React.createElement(View, {
+    ref,
+    style: [{ backgroundColor }, style],
+    ...props,
+  });
+});
+export const RCTKeyboardExtender =
+  View as unknown as React.FC<KeyboardExtenderProps>;
+export const RCTKeyboardToolbarGroupView: React.FC<KeyboardToolbarGroupViewProps> =
+  require("./specs/KeyboardToolbarGroupViewNativeComponent").default;

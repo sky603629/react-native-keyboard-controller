@@ -6,22 +6,30 @@ import type {
   KeyboardEventData,
 } from "./types";
 
-let isClosed = false;
-let lastEvent: KeyboardEventData | null = null;
+let isClosed = true;
+let lastState: KeyboardEventData = {
+  height: 0,
+  duration: 0,
+  timestamp: new Date().getTime(),
+  target: -1,
+  type: "default",
+  appearance: "light",
+};
 
 KeyboardEvents.addListener("keyboardDidHide", (e) => {
   isClosed = true;
-  lastEvent = e;
+  lastState = e;
 });
 
-KeyboardEvents.addListener("keyboardDidShow", (e) => {
+KeyboardEvents.addListener("keyboardWillShow", (e) => {
   isClosed = false;
-  lastEvent = e;
+  lastState = e;
 });
 
-const dismiss = async (
-  { keepFocus }: DismissOptions = { keepFocus: false },
-): Promise<void> => {
+const dismiss = async (options?: Partial<DismissOptions>): Promise<void> => {
+  const keepFocus = options?.keepFocus ?? false;
+  const animated = options?.animated ?? true;
+
   return new Promise((resolve) => {
     if (isClosed) {
       resolve();
@@ -34,19 +42,18 @@ const dismiss = async (
       subscription.remove();
     });
 
-    KeyboardControllerNative.dismiss(keepFocus);
+    KeyboardControllerNative.dismiss(keepFocus, animated);
   });
 };
 const isVisible = () => !isClosed;
-const state = () => lastEvent;
+const state = () => lastState;
 
 export const KeyboardController: KeyboardControllerModule = {
   setDefaultMode: KeyboardControllerNative.setDefaultMode,
   setInputMode: KeyboardControllerNative.setInputMode,
   setFocusTo: KeyboardControllerNative.setFocusTo,
+  preload: KeyboardControllerNative.preload,
   dismiss,
   isVisible,
   state,
-  addListener: KeyboardControllerNative.addListener,
-  removeListeners: KeyboardControllerNative.removeListeners,
 };

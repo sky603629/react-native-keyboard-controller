@@ -119,6 +119,10 @@ void KeyboardControllerViewComponentInstance::onCommandReceived(std::string cons
     CppComponentInstance::onCommandReceived(commandName, args);
     if (commandName == "synchronizeFocusedInputLayout") {
         syncUpLayout();
+        auto rnInstancePtr = this->m_deps->rnInstance.lock();
+        if (rnInstancePtr != nullptr) {
+            rnInstancePtr->postMessageToArkTS("layoutDidSynchronize", folly::dynamic::object());
+        }
     }
 }
 
@@ -408,12 +412,15 @@ bool KeyboardControllerViewComponentInstance::readCaretOffset(
 }
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
-    auto focused = findFocusedTextInput();
+    auto focused = this->findFocusedTextInput();
     if (!focused || !this->enabled) {
         this->textInputVector.clear();
         return;
     }
-    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(this->shared_from_this());
+    auto groupAncestor = ViewHierarchyNavigator::findGroupAncestor(focused);
+    ComponentInstance::Shared scanRoot =
+        groupAncestor ? groupAncestor : this->shared_from_this();
+    this->textInputVector = ViewHierarchyNavigator::getAllInputFields(scanRoot);
     int count = static_cast<int>(this->textInputVector.size());
     int currentIndex = -1;
     for (size_t i = 0; i < this->textInputVector.size(); ++i) {
@@ -424,7 +431,7 @@ void KeyboardControllerViewComponentInstance::focusDidSet() {
         }
     }
     this->textInputVector.clear();
-   // 发送 focusDidSet 事件到 JS 层
+    // 发送 focusDidSet 事件到 JS 层
     if (currentIndex >= 0) {
        auto rnInstancePtr = this->m_deps->rnInstance.lock();
        if (rnInstancePtr != nullptr) {

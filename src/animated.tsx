@@ -1,11 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
-import { KeyboardControllerView } from "./bindings";
+import {
+  FocusedInputEvents,
+  KeyboardControllerView,
+  KeyboardControllerViewCommands,
+} from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
-import { applyMonkeyPatch, revertMonkeyPatch } from "./monkey-patch";
+import { KeyboardController } from "./module";
 import {
   useAnimatedKeyboardHandler,
   useFocusedInputLayoutHandler,
@@ -17,16 +27,14 @@ import type { KeyboardAnimationContext } from "./context";
 import type {
   FocusedInputHandler,
   FocusedInputLayoutChangedEvent,
-  KeyboardControllerProps,
+  KeyboardProviderProps,
   KeyboardHandler,
   NativeEvent,
 } from "./types";
 import type { ViewStyle } from "react-native";
 
 const KeyboardControllerViewAnimated = Reanimated.createAnimatedComponent(
-  Animated.createAnimatedComponent(
-    KeyboardControllerView,
-  ) as React.FC<KeyboardControllerProps>,
+  Animated.createAnimatedComponent(KeyboardControllerView),
 );
 
 type Styles = {
@@ -44,43 +52,6 @@ const styles = StyleSheet.create<Styles>({
   },
 });
 
-type KeyboardProviderProps = {
-  children: React.ReactNode;
-  /**
-   * Set the value to `true`, if you use translucent status bar on Android.
-   * If you already control status bar translucency via `react-native-screens`
-   * or `StatusBar` component from `react-native`, you can ignore it.
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/14
-   * @platform android
-   */
-  statusBarTranslucent?: boolean;
-  /**
-   * Set the value to `true`, if you use translucent navigation bar on Android.
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/119
-   * @platform android
-   */
-  navigationBarTranslucent?: boolean;
-  /**
-   * A boolean property indicating whether to keep edge-to-edge mode always enabled (even when you disable the module).
-   * Defaults to `false`.
-   *
-   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/592
-   * @platform android
-   */
-  preserveEdgeToEdge?: boolean;
-  /**
-   * A boolean prop indicating whether the module is enabled. It indicate only initial state,
-   * i. e. if you try to change this prop after component mount it will not have any effect.
-   * To change the property in runtime use `useKeyboardController` hook and `setEnabled` method.
-   * Defaults to `true`.
-   */
-  enabled?: boolean;
-};
-
 // capture `Platform.OS` in separate variable to avoid deep workletization of entire RN package
 // see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/393 and https://github.com/kirillzyusko/react-native-keyboard-controller/issues/294 for more details
 const OS = Platform.OS;
@@ -91,7 +62,11 @@ export const KeyboardProvider = ({
   navigationBarTranslucent,
   preserveEdgeToEdge,
   enabled: initiallyEnabled = true,
+  preload = true,
 }: KeyboardProviderProps) => {
+  const viewRef = useRef<React.ComponentRef<typeof KeyboardControllerViewAnimated>>(
+    null,
+  );
   // state
   const [enabled, setEnabled] = useState(initiallyEnabled);
   // animated values
@@ -105,18 +80,34 @@ export const KeyboardProvider = ({
     useSharedHandlers<KeyboardHandler>();
   const [setInputHandlers, broadcastInputEvents] =
     useSharedHandlers<FocusedInputHandler>();
+  const update = useCallback(async () => {
+    KeyboardControllerViewCommands.synchronizeFocusedInputLayout(
+      viewRef.current,
+    );
+
+    await new Promise((resolve) => {
+      const subscription = FocusedInputEvents.addListener(
+        "layoutDidSynchronize",
+        () => {
+          subscription.remove();
+          resolve(null);
+        },
+      );
+    });
+  }, []);
   // memo
   const context = useMemo<KeyboardAnimationContext>(
     () => ({
       enabled,
-      animated: { progress: progress, height: Animated.multiply(height,-1)  },
+      animated: { progress: progress, height: Animated.multiply(height, -1) },
       reanimated: { progress: progressSV, height: heightSV },
       layout,
+      update,
       setKeyboardHandlers,
       setInputHandlers,
       setEnabled,
     }),
-    [enabled],
+    [enabled, update],
   );
   const style = useMemo(
     () => [
@@ -136,7 +127,9 @@ export const KeyboardProvider = ({
             },
           },
         ],
-        { useNativeDriver:Platform.OS as string=='harmony'?false:true },
+        {
+          useNativeDriver: (Platform.OS as string) == "harmony" ? false : true,
+        },
       ),
     [],
   );
@@ -167,7 +160,7 @@ export const KeyboardProvider = ({
       onKeyboardMoveEnd: (event: NativeEvent) => {
         "worklet";
         broadcastKeyboardEvents("onEnd", event);
-        updateSharedValues(event, ['harmony']);
+        updateSharedValues(event, ["harmony"]);
       },
       onKeyboardMoveInteractive: (event: NativeEvent) => {
         "worklet";
@@ -211,24 +204,25 @@ export const KeyboardProvider = ({
     },
     [],
   );
-  // effects
+
   useEffect(() => {
-    if (enabled) {
-      applyMonkeyPatch();
-    } else {
-      revertMonkeyPatch();
+    if (preload) {
+      KeyboardController.preload();
     }
-  }, [enabled]);
+  }, [preload]);
 
   return (
     <KeyboardContext.Provider value={context}>
       <KeyboardControllerViewAnimated
+        ref={viewRef}
         enabled={enabled}
         onKeyboardMoveReanimated={keyboardHandler}
         onKeyboardMoveStart={OS === "ios" ? onKeyboardMove : undefined}
         onKeyboardMove={OS === "android" ? onKeyboardMove : undefined}
         onKeyboardMoveInteractive={onKeyboardMove}
-        onKeyboardMoveEnd={ OS as string === "harmony"?onKeyboardMove:undefined}
+        onKeyboardMoveEnd={
+          (OS as string) === "harmony" ? onKeyboardMove : undefined
+        }
         onFocusedInputLayoutChangedReanimated={inputLayoutHandler}
         onFocusedInputTextChangedReanimated={inputTextHandler}
         onFocusedInputSelectionChangedReanimated={inputSelectionHandler}

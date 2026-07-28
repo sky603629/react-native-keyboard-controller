@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 import type {
   EmitterSubscription,
   NativeSyntheticEvent,
@@ -117,33 +117,112 @@ export type KeyboardGestureAreaProps = {
 export type OverKeyboardViewProps = PropsWithChildren<{
   visible: boolean;
 }>;
+export type ClippingScrollViewProps = PropsWithChildren<
+  ViewProps & {
+    /** An additional space that gets applied to the bottom of the `ScrollView` (inside a scrollable content). Default is `0`. */
+    contentInsetBottom?: number;
+    /** An additional space that gets applied to the top of the `ScrollView` (inside a scrollable content). Default is `0`. */
+    contentInsetTop?: number;
+    applyWorkaroundForContentInsetHitTestBug?: boolean;
+  }
+>;
+export type KeyboardBackgroundViewProps = PropsWithChildren<ViewProps>;
+export type KeyboardToolbarGroupViewProps = PropsWithChildren<ViewProps>;
+export type KeyboardExtenderProps = PropsWithChildren<{
+  /** Controls whether this `KeyboardExtender` instance should take effect. Default is `true`. */
+  enabled?: boolean;
+}>;
+export type KeyboardProviderProps = {
+  children: ReactNode;
+  /**
+   * Set the value to `true`, if you use translucent status bar on Android.
+   * If you already control status bar translucency via `react-native-screens`
+   * or `StatusBar` component from `react-native`, you can ignore it.
+   * Defaults to `false`.
+   *
+   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/14
+   * @platform android
+   */
+  statusBarTranslucent?: boolean;
+  /**
+   * Set the value to `true`, if you use translucent navigation bar on Android.
+   * Defaults to `false`.
+   *
+   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/119
+   * @platform android
+   */
+  navigationBarTranslucent?: boolean;
+  /**
+   * A boolean property indicating whether to keep edge-to-edge mode always enabled (even when you disable the module).
+   * Defaults to `false`.
+   *
+   * @see https://github.com/kirillzyusko/react-native-keyboard-controller/issues/592
+   * @platform android
+   */
+  preserveEdgeToEdge?: boolean;
+  /**
+   * A boolean prop indicating whether the module is enabled. It indicate only initial state,
+   * i. e. if you try to change this prop after component mount it will not have any effect.
+   * To change the property in runtime use `useKeyboardController` hook and `setEnabled` method.
+   * Defaults to `true`.
+   */
+  enabled?: boolean;
+  /**
+   * A boolean prop indicating whether to preload the keyboard to reduce time-to-interaction (TTI) on first input focus.
+   * Defaults to `true`.
+   *
+   * @platform ios
+   */
+  preload?: boolean;
+};
 
 export type Direction = "next" | "prev" | "current";
 export type DismissOptions = {
   keepFocus: boolean;
+  animated: boolean;
 };
 export type KeyboardControllerModule = {
   // android only
   setDefaultMode: () => void;
   setInputMode: (mode: number) => void;
+  // ios only
+  preload: () => void;
   // all platforms
-  dismiss: (options?: DismissOptions) => Promise<void>;
+  /**
+   * Dismisses the active keyboard. Removes focus by default, but allows passing
+   * `{ keepFocus: true }` to keep focus. Pass `{ animated: false }` to request
+   * immediate keyboard dismissal when the platform supports it.
+   */
+  dismiss: (options?: Partial<DismissOptions>) => Promise<void>;
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
-  state: () => KeyboardEventData | null;
-  addListener: (eventName: string) => void;
-  removeListeners: (count: number) => void;
+  state: () => KeyboardEventData;
+};
+export type ViewPositionInWindowResult = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 export type KeyboardControllerNativeModule = {
   // android only
   setDefaultMode: () => void;
   setInputMode: (mode: number) => void;
+  // ios only
+  preload: () => void;
   // all platforms
-  dismiss: (keepFocus: boolean) => void;
+  dismiss: (keepFocus: boolean, animated: boolean) => void;
   setFocusTo: (direction: Direction) => void;
+  viewPositionInWindow: (
+    viewTag: number,
+  ) => Promise<ViewPositionInWindowResult>;
   // native event module stuff
   addListener: (eventName: string) => void;
   removeListeners: (count: number) => void;
+  // constants
+  getConstants: () => {
+    keyboardBorderRadius: number;
+  };
 };
 
 // Event module declarations
@@ -158,15 +237,20 @@ export type KeyboardEventData = {
   timestamp: number;
   target: number;
   type: NonNullable<TextInputProps["keyboardType"]>;
-  appearance: NonNullable<TextInputProps["keyboardAppearance"]>;
+  /** Keyboard appearance. Can be one of `dark` or `light`. */
+  appearance: "dark" | "light";
 };
+export type IKeyboardState = {
+  isVisible: boolean;
+} & KeyboardEventData;
 export type KeyboardEventsModule = {
   addListener: (
     name: KeyboardControllerEvents,
     cb: (e: KeyboardEventData) => void,
   ) => EmitterSubscription;
 };
-export type FocusedInputAvailableEvents = "focusDidSet";
+export type FocusedInputAvailableEvents =
+  "focusDidSet" | "layoutDidSynchronize";
 export type FocusedInputEventData = {
   current: number;
   count: number;

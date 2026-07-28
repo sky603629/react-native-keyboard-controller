@@ -86,7 +86,7 @@ void KeyboardGestureAreaComponentInstance::swipeToDismiss() {
     if (rnInstancePtr != nullptr) {
         auto turboModule = rnInstancePtr->getTurboModule("KeyboardController");
         auto arkTsTurboModule = std::dynamic_pointer_cast<rnoh::ArkTSTurboModule>(turboModule);
-        arkTsTurboModule->callSync("dismiss", {false});
+        arkTsTurboModule->callSync("dismiss", {false, true});
     }
 }
 void KeyboardGestureAreaComponentInstance::swipeToUp() {

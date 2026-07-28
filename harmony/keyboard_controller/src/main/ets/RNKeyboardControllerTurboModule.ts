@@ -42,14 +42,20 @@ const NATIVE_KEYBOARD_WILL_EVENT_MIN_API = 20;
 const LEGACY_KEYBOARD_ANIMATION_DURATION = 150;
 const WINDOW_SESSION_MANAGER = 'SystemCapability.Window.SessionManager';
 
+interface KeyboardControllerConstants {
+  keyboardBorderRadius: number;
+}
+
 interface RNKeyboardControllerSpec {
-  getConstants(): {};
+  getConstants(): KeyboardControllerConstants;
 
   setInputMode(mode: number): void;
 
   setDefaultMode(): void;
 
-  dismiss(keepFocus: boolean): void;
+  preload(): void;
+
+  dismiss(keepFocus: boolean, animated: boolean): void;
 
   setFocusTo(direction: string): void;
 
@@ -137,6 +143,17 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     );
 
     this.cleanUpCallbacks.push(
+      this.ctx.rnInstance.cppEventEmitter.subscribe("layoutDidSynchronize", () => {
+        if (this.eventListeners.includes(KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE)) {
+          this.ctx.rnInstance.emitDeviceEvent(
+            KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE,
+            {},
+          );
+        }
+      })
+    );
+
+    this.cleanUpCallbacks.push(
       this.ctx.rnInstance.cppEventEmitter.subscribe(
         'focusedInputChanged',
         (payload: { target: number, type: string }) => {
@@ -147,7 +164,9 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     );
   }
 
-  readonly getConstants: () => {};
+  getConstants(): KeyboardControllerConstants {
+    return { keyboardBorderRadius: 0 };
+  }
 
   // set mode
   setInputMode(mode: number): void {
@@ -158,10 +177,11 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     Logger.info('harmonyOS not support setDefaultMode')
   }
 
-  /**
-   * @description 键盘隐藏
-   * */
-  dismiss(keepFocus: boolean): void {
+  preload(): void {
+    Logger.info('harmonyOS not support preload')
+  }
+
+  dismiss(keepFocus: boolean, animated: boolean): void {
     let inputMethodController = inputMethod.getController();
     inputMethodController.stopInputSession()
 
@@ -204,7 +224,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
       KeyboardControllerEventName.KEYBOARD_DID_SHOW,
       KeyboardControllerEventName.KEYBOARD_WILL_HIDE,
       KeyboardControllerEventName.KEYBOARD_DID_HIDE,
-      KeyboardControllerEventName.FOCUS_DID_SET
+      KeyboardControllerEventName.FOCUS_DID_SET,
+      KeyboardControllerEventName.LAYOUT_DID_SYNCHRONIZE
     ];
   }
 
@@ -421,7 +442,7 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
     else if (colorMode == ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {
       return "light";
     }
-    return "default";
+    return "light";
   }
 
   private async setWindowLayoutFullScreen(preserveEdgeToEdge:boolean){

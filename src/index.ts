@@ -5,8 +5,10 @@ export * from "./hooks";
 export * from "./constants";
 export * from "./module";
 export * from "./types";
+export * from "./compat";
 
 export {
+  KeyboardChatScrollView,
   KeyboardAvoidingView,
   KeyboardStickyView,
   KeyboardAwareScrollView,
@@ -15,9 +17,10 @@ export {
   DefaultKeyboardToolbarTheme,
 } from "./components";
 export type {
+  KeyboardChatScrollViewProps,
   KeyboardAvoidingViewProps,
   KeyboardStickyViewProps,
   KeyboardAwareScrollViewProps,
   KeyboardToolbarProps,
 } from "./components";
-export { OverKeyboardView } from "./views";
+export { OverKeyboardView, KeyboardExtender } from "./views";

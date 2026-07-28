@@ -67,7 +67,7 @@ export function useKeyboardController() {
 export function useReanimatedFocusedInput() {
   const context = useKeyboardContext();
 
-  return { input: context.layout };
+  return { input: context.layout, update: context.update };
 }
 
 export function useFocusedInputHandler(
@@ -88,3 +88,4 @@ export function useFocusedInputHandler(
 }
 
 export * from "./useWindowDimensions";
+export * from "./useKeyboardState";

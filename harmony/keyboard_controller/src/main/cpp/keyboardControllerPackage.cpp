@@ -28,6 +28,7 @@
 #include "keyboardControllerPackage.h"
 #include "KeyboardControllerViewJSIBinder.h"
 #include "KeyboardGestureAreaJSIBinder.h"
+#include "KeyboardToolbarGroupViewJSIBinder.h"
 
 
 using namespace facebook;
@@ -38,11 +39,14 @@ KeyboardControllerPackage::createComponentDescriptorProviders() {
     return {facebook::react::concreteComponentDescriptorProvider<
                 facebook::react::KeyboardControllerViewComponentDescriptor>(),
             facebook::react::concreteComponentDescriptorProvider<
-                facebook::react::KeyboardGestureAreaComponentDescriptor>()};
+                facebook::react::KeyboardGestureAreaComponentDescriptor>(),
+            facebook::react::concreteComponentDescriptorProvider<
+                facebook::react::KeyboardToolbarGroupViewComponentDescriptor>()};
 }
 ComponentJSIBinderByString KeyboardControllerPackage::createComponentJSIBinderByName() {
     return {{"RNKeyboardControllerView", std::make_shared<KeyboardControllerViewJSIBinder>()},
-            {"RNKeyboardGestureArea", std::make_shared<KeyboardGestureAreaJSIBinder>()}};
+            {"RNKeyboardGestureArea", std::make_shared<KeyboardGestureAreaJSIBinder>()},
+            {"KeyboardToolbarGroupView", std::make_shared<KeyboardToolbarGroupViewJSIBinder>()}};
 }
 
 std::unique_ptr<TurboModuleFactoryDelegate> KeyboardControllerPackage::createTurboModuleFactoryDelegate() {
@@ -59,6 +63,9 @@ ComponentInstance::Shared KeyboardControllerPackage::createComponentInstance(con
     }
     if (ctx.componentName == "RNKeyboardGestureArea") {
         return std::make_shared<KeyboardGestureAreaComponentInstance>(ctx);
+    }
+    if (ctx.componentName == "KeyboardToolbarGroupView") {
+        return std::make_shared<KeyboardToolbarGroupViewComponentInstance>(ctx);
     }
     return nullptr;
 };
