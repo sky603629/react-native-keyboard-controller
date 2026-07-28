@@ -56,4 +56,6 @@ export const KeyboardController: KeyboardControllerModule = {
   dismiss,
   isVisible,
   state,
+  addListener: KeyboardControllerNative.addListener,
+  removeListeners: KeyboardControllerNative.removeListeners,
 };

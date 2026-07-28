@@ -197,6 +197,8 @@ export type KeyboardControllerModule = {
   setFocusTo: (direction: Direction) => void;
   isVisible: () => boolean;
   state: () => KeyboardEventData;
+  addListener: (eventName: string) => void;
+  removeListeners: (count: number) => void;
 };
 export type ViewPositionInWindowResult = {
   x: number;
