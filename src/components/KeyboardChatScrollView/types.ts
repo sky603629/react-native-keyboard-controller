@@ -1,6 +1,10 @@
-import type { AnimatedScrollViewComponent } from "../ScrollViewWithBottomPadding";
+import type {
+  AnimatedScrollViewComponent,
+  ScrollViewContentInsets,
+} from "../ScrollViewWithBottomPadding";
 import type { KeyboardLiftBehavior } from "./useChatKeyboard/types";
 import type { ScrollViewProps } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 
 export type KeyboardChatScrollViewProps = {
   /** Custom component for `ScrollView`. Default is `ScrollView`. */
@@ -45,5 +49,69 @@ export type KeyboardChatScrollViewProps = {
    *
    * Default is `false`.
    */
-  freeze?: boolean;
+  freeze?: boolean | SharedValue<boolean>;
+  /**
+   * A shared value representing additional padding from external elements
+   * (e.g., a growing multiline `TextInput` in a `KeyboardStickyView`).
+   *
+   * When this value changes:
+   * - The scrollable range is always extended/contracted (via `contentInset`).
+   * - The scroll position is conditionally adjusted based on `keyboardLiftBehavior`.
+   *
+   * Default is `undefined` (no extra padding).
+   */
+  extraContentPadding?: SharedValue<number>;
+  /**
+   * When `true`, applies a runtime workaround for a React Native 0.81+ bug
+   * where the ScrollView's `contentInset` area does not respond to touch/scroll
+   * gestures (facebook/react-native#54123).
+   *
+   * This uses Objective-C runtime method swizzling on the ScrollView's container
+   * view, which is inherently fragile. Only enable if you are affected by the
+   * upstream bug and understand the risks.
+   *
+   * iOS only. Default is `false`.
+   */
+  applyWorkaroundForContentInsetHitTestBug?: boolean;
+  /**
+   * A shared value representing a minimum inset floor (in pixels).
+   *
+   * When set, the total bottom padding is computed as:
+   * `max(blankSpace, keyboardPadding + extraContentPadding)`
+   *
+   * This means the keyboard "absorbs" into the minimum padding rather than adding to it:
+   * - When `blankSpace >= keyboard + extraContentPadding`: content does NOT move on keyboard open/close.
+   * - When `blankSpace < keyboard + extraContentPadding`: content moves, but only by the excess amount.
+   *
+   * Useful in AI chat apps where a sent message needs space below it (to push it to the top
+   * of the viewport) while the AI response streams in, without that space causing extra movement
+   * when the keyboard opens.
+   *
+   * Default is `undefined` (equivalent to `0` — no minimum floor).
+   */
+  blankSpace?: SharedValue<number>;
+  /**
+   * Fires whenever the effective content inset changes — the static `contentInset`
+   * prop combined with the dynamic keyboard-driven padding.
+   *
+   * Useful on Android, where the synthetic content inset is not reflected in the native
+   * `onScroll` event payload. Consumers such as virtualized lists computing their own
+   * `scrollToEnd` target can use this to track the current inset alongside scroll offsets.
+   */
+  onContentInsetChange?: (insets: ScrollViewContentInsets) => void;
+  /**
+   * Fires whenever the visibility of the content "end" changes — both when the user
+   * arrives at the end and when they leave it. The boolean parameter reflects the new state.
+   *
+   * For non-inverted lists, the "end" is the bottom of the content. For inverted lists
+   * (`inverted={true}`), the "end" is the top of the scroll view, where the latest messages
+   * are rendered. The same internal detection drives `keyboardLiftBehavior="whenAtEnd"`.
+   *
+   * The callback can be either a plain JS function or a Reanimated worklet — the type is
+   * detected automatically. Worklets run on the UI thread; plain functions are dispatched
+   * via `runOnJS`.
+   *
+   * Fires once on mount with the initial state (after the scroll view has been measured).
+   */
+  onEndVisible?: (visible: boolean) => void;
 } & ScrollViewProps;
