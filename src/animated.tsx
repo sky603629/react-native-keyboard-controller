@@ -1,8 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Animated, Platform, StyleSheet } from "react-native";
 import Reanimated, { useSharedValue } from "react-native-reanimated";
 
-import { KeyboardControllerView } from "./bindings";
+import {
+  FocusedInputEvents,
+  KeyboardControllerView,
+  KeyboardControllerViewCommands,
+} from "./bindings";
 import { KeyboardContext } from "./context";
 import { useAnimatedValue, useSharedHandlers } from "./internal";
 import { KeyboardController } from "./module";
@@ -57,6 +67,7 @@ export const KeyboardProvider = ({
   enabled: initiallyEnabled = true,
   preload = true,
 }: KeyboardProviderProps) => {
+  const viewRef = useRef<React.Component<KeyboardControllerProps>>(null);
   // state
   const [enabled, setEnabled] = useState(initiallyEnabled);
   // animated values
@@ -70,18 +81,34 @@ export const KeyboardProvider = ({
     useSharedHandlers<KeyboardHandler>();
   const [setInputHandlers, broadcastInputEvents] =
     useSharedHandlers<FocusedInputHandler>();
+  const update = useCallback(async () => {
+    KeyboardControllerViewCommands.synchronizeFocusedInputLayout(
+      viewRef.current,
+    );
+
+    await new Promise((resolve) => {
+      const subscription = FocusedInputEvents.addListener(
+        "layoutDidSynchronize",
+        () => {
+          subscription.remove();
+          resolve(null);
+        },
+      );
+    });
+  }, []);
   // memo
   const context = useMemo<KeyboardAnimationContext>(
     () => ({
       enabled,
-      animated: { progress: progress, height: Animated.multiply(height,-1)  },
+      animated: { progress: progress, height: Animated.multiply(height, -1) },
       reanimated: { progress: progressSV, height: heightSV },
       layout,
+      update,
       setKeyboardHandlers,
       setInputHandlers,
       setEnabled,
     }),
-    [enabled],
+    [enabled, update],
   );
   const style = useMemo(
     () => [
@@ -101,7 +128,9 @@ export const KeyboardProvider = ({
             },
           },
         ],
-        { useNativeDriver:Platform.OS as string=='harmony'?false:true },
+        {
+          useNativeDriver: (Platform.OS as string) == "harmony" ? false : true,
+        },
       ),
     [],
   );
@@ -132,7 +161,7 @@ export const KeyboardProvider = ({
       onKeyboardMoveEnd: (event: NativeEvent) => {
         "worklet";
         broadcastKeyboardEvents("onEnd", event);
-        updateSharedValues(event, ['harmony']);
+        updateSharedValues(event, ["harmony"]);
       },
       onKeyboardMoveInteractive: (event: NativeEvent) => {
         "worklet";
@@ -186,12 +215,15 @@ export const KeyboardProvider = ({
   return (
     <KeyboardContext.Provider value={context}>
       <KeyboardControllerViewAnimated
+        ref={viewRef}
         enabled={enabled}
         onKeyboardMoveReanimated={keyboardHandler}
         onKeyboardMoveStart={OS === "ios" ? onKeyboardMove : undefined}
         onKeyboardMove={OS === "android" ? onKeyboardMove : undefined}
         onKeyboardMoveInteractive={onKeyboardMove}
-        onKeyboardMoveEnd={ OS as string === "harmony"?onKeyboardMove:undefined}
+        onKeyboardMoveEnd={
+          (OS as string) === "harmony" ? onKeyboardMove : undefined
+        }
         onFocusedInputLayoutChangedReanimated={inputLayoutHandler}
         onFocusedInputTextChangedReanimated={inputTextHandler}
         onFocusedInputSelectionChangedReanimated={inputSelectionHandler}

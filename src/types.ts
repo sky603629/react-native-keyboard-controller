@@ -249,7 +249,8 @@ export type KeyboardEventsModule = {
     cb: (e: KeyboardEventData) => void,
   ) => EmitterSubscription;
 };
-export type FocusedInputAvailableEvents = "focusDidSet";
+export type FocusedInputAvailableEvents =
+  "focusDidSet" | "layoutDidSynchronize";
 export type FocusedInputEventData = {
   current: number;
   count: number;

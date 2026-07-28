@@ -132,6 +132,10 @@ void KeyboardControllerViewComponentInstance::onCommandReceived(std::string cons
     CppComponentInstance::onCommandReceived(commandName, args);
     if (commandName == "synchronizeFocusedInputLayout") {
         syncUpLayout();
+        auto rnInstancePtr = this->m_deps->rnInstance.lock();
+        if (rnInstancePtr != nullptr) {
+            rnInstancePtr->postMessageToArkTS("layoutDidSynchronize", folly::dynamic::object());
+        }
     }
 }
 

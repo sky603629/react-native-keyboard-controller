@@ -22,6 +22,7 @@ export type KeyboardAnimationContext = {
   animated: AnimatedContext;
   reanimated: ReanimatedContext;
   layout: SharedValue<FocusedInputLayoutChangedEvent | null>;
+  update: () => Promise<void>;
   setKeyboardHandlers: (handlers: KeyboardHandlers) => void;
   setInputHandlers: (handlers: FocusedInputHandlers) => void;
   setEnabled: React.Dispatch<React.SetStateAction<boolean>>;
@@ -51,6 +52,7 @@ const defaultContext: KeyboardAnimationContext = {
     height: DEFAULT_SHARED_VALUE,
   },
   layout: DEFAULT_LAYOUT,
+  update: () => Promise.resolve(),
   setKeyboardHandlers: NESTED_NOOP,
   setInputHandlers: NESTED_NOOP,
   setEnabled: NOOP,
