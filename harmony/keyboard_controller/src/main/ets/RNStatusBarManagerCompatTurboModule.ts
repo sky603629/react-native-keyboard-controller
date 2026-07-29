@@ -88,7 +88,7 @@ export  class RNStatusBarManagerCompatTurboModule extends TurboModule implements
   async  setColor(color: number, animated: boolean): Promise<void> {
     Logger.info("###turboModule setColor");
     let newSystemBarProperty: window.SystemBarProperties = {
-      statusBarColor: color.toString(),
+      statusBarColor: this.toHarmonyColor(color),
       enableStatusBarAnimation:animated
     };
     this.setWindowSystemBarProperties(newSystemBarProperty)
@@ -112,6 +112,15 @@ export  class RNStatusBarManagerCompatTurboModule extends TurboModule implements
       statusBarContentColor:themeFlag?"#000000":"#ffffff",
     };
     this.setWindowSystemBarProperties(newSystemBarProperty)
+  }
+
+  private toHarmonyColor(color: number): string {
+    const unsignedColor = color >>> 0;
+    const hex = unsignedColor > 0xffffff
+      ? unsignedColor.toString(16).padStart(8, '0')
+      : unsignedColor.toString(16).padStart(6, '0');
+
+    return `#${hex}`;
   }
 
 }

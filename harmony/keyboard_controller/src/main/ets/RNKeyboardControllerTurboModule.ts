@@ -31,11 +31,16 @@ import window from '@ohos.window';
 import inputMethod from '@ohos.inputMethod';
 import Logger from './Logger';
 import { KeyboardControllerEventName, KeyboardStatusType } from './Type';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
 import { JSON } from '@kit.ArkTS';
 import { ConfigurationConstant } from '@kit.AbilityKit';
+import { KeyboardAvoidMode } from '@kit.ArkUI';
 
 declare function px2vp(px: number): number;
+
+const NATIVE_KEYBOARD_WILL_EVENT_MIN_API = 20;
+const LEGACY_KEYBOARD_ANIMATION_DURATION = 150;
+const WINDOW_SESSION_MANAGER = 'SystemCapability.Window.SessionManager';
 
 interface RNKeyboardControllerSpec {
   getConstants(): {};
@@ -55,12 +60,64 @@ interface RNKeyboardControllerSpec {
 
 export class RNKeyboardControllerTurboModule extends TurboModule implements RNKeyboardControllerSpec {
   private context: common.UIAbilityContext;
-  private keyboardHeight: number;
-  private keyboardStatus: KeyboardStatusType;
+  private keyboardHeight: number = 0;
+  private keyboardStatus: KeyboardStatusType = KeyboardStatusType.HIDE;
   private eventListeners: KeyboardControllerEventName[];
-  private currentWindow:window.Window;
-  private enabled:boolean;
+  private currentWindow: window.Window | undefined = undefined;
+  private enabled: boolean = false;
   private cleanUpCallbacks: (() => void)[] = [];
+  private previousKeyboardAvoidMode: KeyboardAvoidMode | undefined = undefined;
+  private keyboardAvoidModeControlled: boolean = false;
+  private supportsNativeWillEvents: boolean = false;
+  private keyboardHeightListenerRegistered: boolean = false;
+  private nativeWillShowListenerRegistered: boolean = false;
+  private nativeWillHideListenerRegistered: boolean = false;
+  private observerGeneration: number = 0;
+  private focusedInputTarget: number = -1;
+  private focusedInputKeyboardType: string = 'default';
+  private currentKeyboardAnimationDuration: number = 0;
+
+  private readonly keyboardHeightChangeHandler = (_data: number): void => {
+    if (!this.enabled || !this.currentWindow) {
+      return;
+    }
+    try {
+      const keyboardAvoidArea = this.currentWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
+      const height = Math.ceil(px2vp(keyboardAvoidArea.height));
+      if (this.keyboardHeight === height) {
+        return;
+      }
+      const wasVisible = this.keyboardHeight > 0;
+      const isVisible = height > 0;
+      this.keyboardStatus = height > 0 ? KeyboardStatusType.SHOW : KeyboardStatusType.HIDE;
+      this.keyboardHeight = height;
+      if (wasVisible !== isVisible) {
+        this.keyboardControllerEventHandle(this.keyboardStatus, height);
+      }
+      this.ctx.rnInstance.postMessageToCpp('keyboardHeightChange', height);
+    } catch (exception) {
+      Logger.error('Failed to handle keyboard height change. Cause: ' + JSON.stringify(exception));
+    }
+  };
+
+  private readonly keyboardWillShowHandler = (info: window.KeyboardInfo): void => {
+    if (!this.enabled) {
+      return;
+    }
+    const duration = this.getKeyboardDurationFromKeyboardInfo(info);
+    this.currentKeyboardAnimationDuration = duration;
+    const height = Math.ceil(px2vp(info.endRect.height));
+    this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, height, duration);
+  };
+
+  private readonly keyboardWillHideHandler = (info: window.KeyboardInfo): void => {
+    if (!this.enabled) {
+      return;
+    }
+    const duration = this.getKeyboardDurationFromKeyboardInfo(info);
+    this.currentKeyboardAnimationDuration = duration;
+    this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0, duration);
+  };
   constructor(ctx) {
     super(ctx);
     this.context = this.ctx.uiAbilityContext;
@@ -77,6 +134,16 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
           });
         }
       })
+    );
+
+    this.cleanUpCallbacks.push(
+      this.ctx.rnInstance.cppEventEmitter.subscribe(
+        'focusedInputChanged',
+        (payload: { target: number, type: string }) => {
+          this.focusedInputTarget = payload.target;
+          this.focusedInputKeyboardType = payload.type;
+        }
+      )
     );
   }
 
@@ -127,10 +194,8 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
    * @description 删除监听事件
    * */
   removeListeners(count: number): void {
-    let num = this.eventListeners.length;
-    if (num>0) {
-      this.eventListeners = [];
-    }
+    // DeviceEventEmitter does not report which event was removed. Keep native
+    // emission enabled so removing one JS subscription cannot disable others.
   }
 
   private supportListeners() {
@@ -166,86 +231,189 @@ export class RNKeyboardControllerTurboModule extends TurboModule implements RNKe
   }
 
   private keyboardControllerEventHandle(keyboardStatus: number, height: number) {
-    Logger.info('###turboModule keyboardControllerEventHandle', String(keyboardStatus) + ',' + String(height));
-    if(!this.enabled){
-      return
+    if (!this.enabled) {
+      return;
     }
 
-    if (this.keyboardStatus == KeyboardStatusType.HIDE) {
-      // 键盘隐藏
-      Logger.info('###turboModule keyboardControllerEventHandle');
-      this.eventListeners.includes(KeyboardControllerEventName.KEYBOARD_DID_HIDE) &&
-      this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.KEYBOARD_DID_HIDE, {
-        duration: 0,
-        timestamp: new Date().getTime(),
-        target: 0,
-        height: height,
-        tag:0,
-        appearance:this.getKeyboardAppearance()
-      });
+    const legacyDuration = deviceInfo.sdkApiVersion < NATIVE_KEYBOARD_WILL_EVENT_MIN_API
+      ? LEGACY_KEYBOARD_ANIMATION_DURATION
+      : 0;
+    const duration = this.supportsNativeWillEvents ? this.currentKeyboardAnimationDuration : legacyDuration;
+    if (keyboardStatus === KeyboardStatusType.HIDE) {
+      if (!this.supportsNativeWillEvents) {
+        this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_HIDE, 0, duration);
+      }
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_DID_HIDE, 0, duration);
+      this.currentKeyboardAnimationDuration = 0;
     }
-    if (this.keyboardStatus == KeyboardStatusType.SHOW) {
-      // 键盘显示
-      Logger.info('###turboModule keyboardControllerEventHandle');
-      this.eventListeners.includes(KeyboardControllerEventName.KEYBOARD_DID_SHOW) &&
-      this.ctx.rnInstance.emitDeviceEvent(KeyboardControllerEventName.KEYBOARD_DID_SHOW, {
-        duration: 0,
-        timestamp: new Date().getTime(),
-        target: 0,
-        height:height,
-        tag:0,
-        appearance:this.getKeyboardAppearance()
-      });
+    if (keyboardStatus === KeyboardStatusType.SHOW) {
+      if (!this.supportsNativeWillEvents) {
+        this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_WILL_SHOW, height, duration);
+      }
+      this.emitKeyboardEvent(KeyboardControllerEventName.KEYBOARD_DID_SHOW, height, duration);
     }
   }
 
-  private async startKeyboardObserver(open:boolean) {
-    Logger.info("###turboModule startKeyboardObserver",String(open));
-    this.enabled=open;
-    this.currentWindow = await window.getLastWindow(this.context);
+  private emitKeyboardEvent(eventName: KeyboardControllerEventName, height: number, duration: number): void {
+    if (!this.enabled || !this.eventListeners.includes(eventName)) {
+      return;
+    }
+    this.ctx.rnInstance.emitDeviceEvent(eventName, {
+      height,
+      duration,
+      timestamp: new Date().getTime(),
+      target: this.focusedInputTarget,
+      type: this.focusedInputKeyboardType,
+      appearance: this.getKeyboardAppearance(),
+    });
+  }
+
+  private async startKeyboardObserver(
+    open: boolean,
+    disableSystemKeyboardAvoidance: boolean = false
+  ): Promise<void> {
+    const generation = ++this.observerGeneration;
+    this.enabled = open;
+    if (!open) {
+      this.stopKeyboardObserver();
+      return;
+    }
+
+    let currentWindow: window.Window;
+    try {
+      currentWindow = await window.getLastWindow(this.context);
+    } catch (exception) {
+      Logger.error('Failed to get the current window. Cause: ' + JSON.stringify(exception));
+      return;
+    }
+    if (!this.enabled || generation !== this.observerGeneration) {
+      return;
+    }
+
+    this.currentWindow = currentWindow;
+    this.setKeyboardAvoidModeEnabled(disableSystemKeyboardAvoidance);
+    this.supportsNativeWillEvents =
+      deviceInfo.sdkApiVersion >= NATIVE_KEYBOARD_WILL_EVENT_MIN_API &&
+      canIUse(WINDOW_SESSION_MANAGER);
+    this.registerKeyboardHeightListener();
+    this.registerNativeWillListeners();
+  }
+
+  private stopKeyboardObserver(): void {
+    this.unregisterNativeWillListeners();
+    if (this.currentWindow && this.keyboardHeightListenerRegistered) {
+      try {
+        this.currentWindow.off('keyboardHeightChange', this.keyboardHeightChangeHandler);
+      } catch (exception) {
+        Logger.error('Failed to close keyboardHeightChange. Cause: ' + JSON.stringify(exception));
+      }
+    }
+    this.keyboardHeightListenerRegistered = false;
+    this.setKeyboardAvoidModeEnabled(false);
+    this.currentWindow = undefined;
+    this.keyboardHeight = 0;
+    this.keyboardStatus = KeyboardStatusType.HIDE;
+    this.currentKeyboardAnimationDuration = 0;
+    this.supportsNativeWillEvents = false;
+  }
+
+  private registerKeyboardHeightListener(): void {
+    if (!this.currentWindow || this.keyboardHeightListenerRegistered) {
+      return;
+    }
+    try {
+      this.currentWindow.on('keyboardHeightChange', this.keyboardHeightChangeHandler);
+      this.keyboardHeightListenerRegistered = true;
+    } catch (exception) {
+      Logger.error('Failed to enable keyboardHeightChange. Cause: ' + JSON.stringify(exception));
+    }
+  }
+
+  private registerNativeWillListeners(): void {
+    if (!this.currentWindow || !this.supportsNativeWillEvents ||
+        this.nativeWillShowListenerRegistered || this.nativeWillHideListenerRegistered) {
+      return;
+    }
+
+    try {
+      this.currentWindow.on('keyboardWillShow', this.keyboardWillShowHandler);
+      this.nativeWillShowListenerRegistered = true;
+      this.currentWindow.on('keyboardWillHide', this.keyboardWillHideHandler);
+      this.nativeWillHideListenerRegistered = true;
+    } catch (exception) {
+      this.unregisterNativeWillListeners();
+      this.supportsNativeWillEvents = false;
+      Logger.error('Native keyboard will events unavailable; using confirmed-state fallback. Cause: ' +
+        JSON.stringify(exception));
+    }
+  }
+
+  private unregisterNativeWillListeners(): void {
     if (!this.currentWindow) {
-      throw ('windowInstance is null')
-      return
+      this.nativeWillShowListenerRegistered = false;
+      this.nativeWillHideListenerRegistered = false;
+      return;
     }
-    if(!open){
+    if (this.nativeWillShowListenerRegistered) {
       try {
-        Logger.info("###turboModule Close KeyboardObserver");
-        this.currentWindow.off('keyboardHeightChange', (data) => {
-          this.keyboardStatus = KeyboardStatusType.HIDE;
-          this.keyboardHeight = 0;
-          Logger.info('### close keyboardHeightChange observer');
-        });
+        this.currentWindow.off('keyboardWillShow', this.keyboardWillShowHandler);
       } catch (exception) {
-        Logger.error('### Failed to close the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
+        Logger.error('Failed to close keyboardWillShow. Cause: ' + JSON.stringify(exception));
       }
-    }else{
-      try {
-        this.currentWindow.on('keyboardHeightChange', (data) => {
-          const keyboardAvoidArea = this.currentWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD).bottomRect;
-          let height = Math.ceil(px2vp(keyboardAvoidArea.height))
-          if(open){
-            if(this.keyboardHeight == height ){
-              return
-            }
-            if (height > 0) {
-              this.keyboardStatus = KeyboardStatusType.SHOW;
-            } else {
-              this.keyboardStatus = KeyboardStatusType.HIDE;
-            }
-            this.keyboardHeight = height;
-            this.keyboardControllerEventHandle(this.keyboardStatus, height);
-            this.ctx.rnInstance.postMessageToCpp('keyboardHeightChange', height);
-          }
-
-        });
-      } catch (exception) {
-        Logger.error('Failed to enable the listener for keyboard height changes. Cause: ' + JSON.stringify(exception));
-      }
+      this.nativeWillShowListenerRegistered = false;
     }
-
+    if (this.nativeWillHideListenerRegistered) {
+      try {
+        this.currentWindow.off('keyboardWillHide', this.keyboardWillHideHandler);
+      } catch (exception) {
+        Logger.error('Failed to close keyboardWillHide. Cause: ' + JSON.stringify(exception));
+      }
+      this.nativeWillHideListenerRegistered = false;
+    }
   }
 
-  private getKeyboardAppearance(): String {
+  private getKeyboardDurationFromKeyboardInfo(info: window.KeyboardInfo): number {
+    if (info.animated === false) {
+      return 0;
+    }
+    const duration = info.config?.duration;
+    return typeof duration === 'number' && duration >= 0 ? duration : 0;
+  }
+
+  __onDestroy__(): void {
+    this.enabled = false;
+    ++this.observerGeneration;
+    this.stopKeyboardObserver();
+    this.cleanUpCallbacks.forEach((callback) => callback());
+    this.cleanUpCallbacks = [];
+    super.__onDestroy__();
+  }
+
+  private setKeyboardAvoidModeEnabled(enabled: boolean): void {
+    if (!this.currentWindow) {
+      return;
+    }
+    try {
+      const uiContext = this.currentWindow.getUIContext();
+      if (enabled) {
+        if (!this.keyboardAvoidModeControlled) {
+          this.previousKeyboardAvoidMode = uiContext.getKeyboardAvoidMode();
+          this.keyboardAvoidModeControlled = true;
+        }
+        uiContext.setKeyboardAvoidMode(KeyboardAvoidMode.NONE);
+      } else if (this.keyboardAvoidModeControlled) {
+        if (this.previousKeyboardAvoidMode !== undefined) {
+          uiContext.setKeyboardAvoidMode(this.previousKeyboardAvoidMode);
+        }
+        this.previousKeyboardAvoidMode = undefined;
+        this.keyboardAvoidModeControlled = false;
+      }
+    } catch (exception) {
+      Logger.error('Failed to update KeyboardAvoidMode. Cause: ' + JSON.stringify(exception));
+    }
+  }
+
+  private getKeyboardAppearance(): string {
     const colorMode = this.context.config.colorMode;
     if (colorMode == ConfigurationConstant.ColorMode.COLOR_MODE_DARK) {
       return "dark";
