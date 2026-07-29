@@ -126,8 +126,8 @@ private:
     void dispatchLayoutToJS(FocusedInputLayoutData const &event);
     void dispatchKeyboardFocusChangedIfNeeded();
     TextInputComponentInstance::Shared findFocusedTextInput();
-    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos, double caretX, double caretY);
-    bool readCaretOffset(ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const;
+    // Harmony does not expose selection start/end geometry; x/y are reported as 0.
+    void dispatchSelectionToJS(int target, int32_t startPos, int32_t endPos);
     void postFocusedInputChanged();
     int findParentScrollViewTarget(ComponentInstance::Shared const &input);
     double pxToVp(double px) const;

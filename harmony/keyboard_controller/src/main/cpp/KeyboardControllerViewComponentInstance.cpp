@@ -343,68 +343,27 @@ void KeyboardControllerViewComponentInstance::onTextSelectionChange(int32_t loca
     if (!focusedInput) {
         return;
     }
-    ArkUINode &node = focusedInput->getLocalRootArkUINode();
-    ArkUI_NodeHandle handle = node.getArkUINodeHandle();
-    bool isTextArea = dynamic_cast<TextAreaNode *>(&node) != nullptr;
-    int32_t caretIndex = location;
-    float caretX = 0.f;
-    float caretY = 0.f;
-    bool hasCaret = handle != nullptr && readCaretOffset(handle, isTextArea, caretIndex, caretX, caretY);
     syncUpLayout();
     dispatchSelectionToJS(
         static_cast<int>(focusedInput->getTag()),
         location,
-        location + length,
-        hasCaret ? pxToVp(caretX) : 0.0,
-        hasCaret ? pxToVp(caretY) : 0.0);
+        location + length);
 }
 
 void KeyboardControllerViewComponentInstance::dispatchSelectionToJS(
-    int target, int32_t startPos, int32_t endPos, double caretX, double caretY) {
+    int target, int32_t startPos, int32_t endPos) {
     if (!m_eventEmitter || !this->enabled) {
         return;
     }
     facebook::react::KeyboardControllerViewEventEmitter::InputSectionEvent event = {};
     event.target = target;
-    event.selection.start.x = caretX;
-    event.selection.start.y = caretY;
+    event.selection.start.x = 0;
+    event.selection.start.y = 0;
     event.selection.start.position = startPos;
-    event.selection.end.x = caretX;
-    event.selection.end.y = caretY;
+    event.selection.end.x = 0;
+    event.selection.end.y = 0;
     event.selection.end.position = endPos;
     m_eventEmitter->onFocusedInputSelectionChanged(event);
-}
-
-bool KeyboardControllerViewComponentInstance::readCaretOffset(
-    ArkUI_NodeHandle handle, bool isTextArea, int32_t &index, float &x, float &y) const {
-    auto *nodeApi = NativeNodeApi::getInstance();
-    if (handle == nullptr || nodeApi == nullptr || nodeApi->getAttribute == nullptr) {
-        return false;
-    }
-    auto tryRead = [&](ArkUI_NodeAttributeType attr) -> bool {
-        const ArkUI_AttributeItem *item = nodeApi->getAttribute(handle, attr);
-        if (item == nullptr || item->value == nullptr) {
-            return false;
-        }
-        if (item->size >= 3) {
-            index = item->value[0].i32;
-            x = item->value[1].f32;
-            y = item->value[2].f32;
-            return std::isfinite(x) && std::isfinite(y) && y >= 0.f;
-        }
-        if (item->size == 2) {
-            index = item->value[0].i32;
-            x = 0.f;
-            y = item->value[1].f32;
-            return std::isfinite(y) && y >= 0.f;
-        }
-        return false;
-    };
-    ArkUI_NodeAttributeType primary =
-        isTextArea ? NODE_TEXT_AREA_CARET_OFFSET : NODE_TEXT_INPUT_CARET_OFFSET;
-    ArkUI_NodeAttributeType secondary =
-        isTextArea ? NODE_TEXT_INPUT_CARET_OFFSET : NODE_TEXT_AREA_CARET_OFFSET;
-    return tryRead(primary) || tryRead(secondary);
 }
 
 void KeyboardControllerViewComponentInstance::focusDidSet() {
